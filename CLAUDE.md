@@ -153,3 +153,71 @@ DECISIONES TOMADAS (registro)
 - 2026-11-25 Plataformas: celular, tablet y PC (web/PWA) con el mismo código; layouts responsivos para los tres tamaños.
 - 2026-11-25 Guardado: SQLite local (expo-sqlite), que funciona sin internet en la mesa. Esquema en SQL compatible con PostgreSQL para poder sincronizar más adelante con PostgreSQL (p. ej. Supabase) como fase OPCIONAL. Se descartó PostgreSQL directo porque exige servidor e internet y rompe "sin backend". Pendiente en Fase 0: verificar expo-sqlite en web; si falla, plan B solo para web.
 - 2026-11-25 Pruebas: Jest (jest-expo), una sola herramienta para core e interfaz.
+
+NUEVA FUNCIONALIDAD: ESTRATEGIA BÁSICA CON TABLA DE REFERENCIA
+
+Contexto: ya tenemos el prompt maestro del proyecto. Esto es una ADICIÓN. Antes de tocar nada, revisa el estado actual del código y del plan, dime en qué fase estamos y dónde encaja esto (Fase 3). No reescribas lo que ya funciona. Sigue el mismo ciclo de trabajo de siempre: tú diseñas y revisas, Codex solo escribe el código, y esperas mi OK entre pasos.
+
+OBJETIVO
+El juego no es solo contar: se decide con (1) la estrategia básica, que es la base, y (2) las desviaciones por conteo, que la modifican en casos puntuales. El conteo cambia sobre todo la apuesta y unas pocas jugadas; el resto lo manda la tabla.
+
+CÓMO DEBE FUNCIONAR
+1. El motor GENERA la estrategia desde las reglas configuradas (EV exacto), no con tablas escritas a mano.
+2. La tabla de abajo es el ORÁCULO DE PRUEBAS: con el zapato completo, la salida del motor debe coincidir celda por celda. Cualquier diferencia es un bug o debe justificarse.
+3. Con la composición real del zapato, el EV puede diferir de la tabla en jugadas marginales. Esas diferencias se muestran como "desviación por composición" y se distinguen de las "desviaciones por conteo" (Illustrious 18, Fab 4).
+4. Pantalla "Estrategia": la tabla completa con colores por acción, la celda de mi mano actual resaltada, y si la jugada óptima real difiere de la tabla, un aviso con el motivo.
+
+REGLAS DE ESTA TABLA
+8 mazos, el crupier se planta en todos los 17 (S17), doblar después de dividir permitido (DAS), sin rendición, el crupier mira la carta tapada (peek) con A o 10.
+Sigue por confirmar en mi mesa: DAS, rendición y peek. NO los asumas: déjalos como interruptores. Cuando cambie alguno, regenera la tabla y dime exactamente qué celdas cambian.
+
+LEYENDA
+H pedir, S plantarse, D doblar (si no se puede, pedir), Ds doblar (si no se puede, plantarse), P dividir.
+
+DUROS          2  3  4  5  6  7  8  9  10 A
+5 a 8          H  H  H  H  H  H  H  H  H  H
+9              H  D  D  D  D  H  H  H  H  H
+10             D  D  D  D  D  D  D  D  H  H
+11             D  D  D  D  D  D  D  D  D  H
+12             H  H  S  S  S  H  H  H  H  H
+13 a 16        S  S  S  S  S  H  H  H  H  H
+17 o más       S  S  S  S  S  S  S  S  S  S
+
+SUAVES         2  3  4  5  6  7  8  9  10 A
+A,2            H  H  H  D  D  H  H  H  H  H
+A,3            H  H  H  D  D  H  H  H  H  H
+A,4            H  H  D  D  D  H  H  H  H  H
+A,5            H  H  D  D  D  H  H  H  H  H
+A,6            H  D  D  D  D  H  H  H  H  H
+A,7            S  Ds Ds Ds Ds S  S  H  H  H
+A,8 y A,9      S  S  S  S  S  S  S  S  S  S
+
+PAREJAS        2  3  4  5  6  7  8  9  10 A
+A,A            P  P  P  P  P  P  P  P  P  P
+10,10          S  S  S  S  S  S  S  S  S  S
+9,9            P  P  P  P  P  S  P  P  S  S
+8,8            P  P  P  P  P  P  P  P  P  P
+7,7            P  P  P  P  P  P  H  H  H  H
+6,6            P  P  P  P  P  H  H  H  H  H
+5,5            D  D  D  D  D  D  D  D  H  H   (se juega como duro 10, nunca se divide)
+4,4            H  H  H  P  P  H  H  H  H  H
+3,3            P  P  P  P  P  P  H  H  H  H
+2,2            P  P  P  P  P  P  H  H  H  H
+
+Seguro: no tomarlo, salvo que el conteo real sea +3 o más.
+Rendición: solo si la mesa la ofrece; genérala desde el EV.
+
+IMPORTANTE: ESTA TABLA SE ESCRIBIÓ DE MEMORIA
+Antes de usarla como oráculo, verifícala contra una fuente publicada confiable para 8 mazos, S17, DAS, sin rendición y con peek, y dime cualquier discrepancia. Si hay una, la fuente publicada manda y me explicas la diferencia.
+
+PRUEBAS OBLIGATORIAS
+- Una prueba por fila de la tabla (duros, suaves y parejas) contra la salida del motor con el zapato completo.
+- Pruebas de regeneración: al cambiar DAS, peek o rendición, las celdas que cambian son exactamente las esperadas.
+- Simulación Monte Carlo (millones de manos) jugando la estrategia básica: la ventaja de la casa debe ser coherente con lo publicado para esas reglas (cerca de 0,4-0,5 %). Informa la desviación.
+- Tú verificas de forma independiente, no solo confías en las pruebas que escriba Codex.
+
+AL TERMINAR
+Actualiza graphify, docs/APRENDIZAJE.md y CLAUDE.md. Explícame en simple la diferencia entre estrategia básica, desviación por conteo y desviación por composición, con un ejemplo con números. Dime si conviene correr /ship u otro comando.
+
+EMPIEZA ASÍ
+Dime en qué fase estamos, qué existe ya en src/core y propón el plan de esta adición. No delegues código hasta que yo diga OK.
