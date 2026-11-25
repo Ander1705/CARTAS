@@ -221,3 +221,5 @@ Actualiza graphify, docs/APRENDIZAJE.md y CLAUDE.md. Explícame en simple la dif
 
 EMPIEZA ASÍ
 Dime en qué fase estamos, qué existe ya en src/core y propón el plan de esta adición. No delegues código hasta que yo diga OK.
+- 2026-11-25 SQLite verificado en web (PC) y celular (Expo Go): persiste al recargar y al cerrar/abrir. En web exige cabeceras COOP/COEP (metro.config.js en desarrollo). Para publicar la web, el hosting debe permitir cabeceras propias: Cloudflare Pages, Netlify o Vercel (GitHub Pages NO sirve).
+- 2026-11-25 En esta máquina PowerShell bloquea npm.ps1: usar npm.cmd / npx.cmd. Codex tiene red habilitada en ~/.codex/config.toml (respaldo en config.toml.bak).
