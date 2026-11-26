@@ -116,12 +116,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'stretch',
+    minWidth: 0,
   },
   center: {
-    flex: 3,
+    flex: 1,
     minWidth: 0,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   portrait: {
     flex: 1,
+    minHeight: 0,
   },
 });

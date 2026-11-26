@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -25,11 +26,17 @@ type SeatProps = {
   mySeat: SeatNumber | null;
   inactive: boolean;
   selected: boolean;
-  compact: boolean;
+  width: number | `${number}%`;
+  height: number;
+  fontSize: number;
   onPressSeat(seat: SeatNumber, hand: number): void;
   onLongPressSeat(seat: SeatNumber): void;
   onPressCard(target: Target, index: number): void;
 };
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
 
 function total(cards: Rank[]) {
   const base = cards.reduce(
@@ -49,30 +56,15 @@ function Seat({
   mySeat,
   inactive,
   selected,
-  compact,
+  width,
+  height,
+  fontSize,
   onPressSeat,
   onLongPressSeat,
   onPressCard,
 }: SeatProps) {
-  const width = compact ? 90 : 110;
-
-  return (
-    <View
-      accessibilityLabel={`Puesto ${seat}, ${hands.reduce((sum, hand) => sum + hand.length, 0)} cartas`}
-      style={[
-        styles.seat,
-        {
-          width,
-          borderWidth: selected ? 4 : seat === mySeat ? 2 : 1,
-          borderColor: selected
-            ? theme.colors.ok
-            : seat === mySeat
-              ? theme.colors.gold
-              : theme.colors.border,
-          opacity: inactive ? 0.4 : 1,
-        },
-      ]}
-    >
+  const content = (
+    <>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Puesto ${seat}${seat === mySeat ? ', tu asiento' : ''}${inactive ? ', no juega' : ''}`}
@@ -81,7 +73,7 @@ function Seat({
         onLongPress={() => onLongPressSeat(seat)}
         style={styles.seatHeader}
       >
-        <Text style={styles.seatText}>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.seatText, { fontSize }]}>
           {seat}{seat === mySeat ? ' · TÚ' : ''}{inactive ? ' · no juega' : ''}
         </Text>
       </Pressable>
@@ -97,7 +89,7 @@ function Seat({
               onLongPress={() => onPressCard({ kind: 'seat', seat, hand }, index)}
               style={styles.cardTouch}
             >
-              <Text style={styles.cardText}>{labelCard(card)}</Text>
+              <Text style={[styles.cardText, { fontSize }]}>{labelCard(card)}</Text>
             </Pressable>
           ))}
           <Pressable
@@ -106,10 +98,34 @@ function Seat({
             onPress={() => onPressSeat(seat, hand)}
             style={styles.handTotalTouch}
           >
-            <Text style={styles.cardText}>{total(cards)}</Text>
+            <Text style={[styles.cardText, { fontSize }]}>{total(cards)}</Text>
           </Pressable>
         </View>
       ))}
+    </>
+  );
+
+  return (
+    <View
+      accessibilityLabel={`Puesto ${seat}, ${hands.reduce((sum, hand) => sum + hand.length, 0)} cartas`}
+      style={[
+        styles.seat,
+        {
+          width,
+          height,
+          borderWidth: selected ? 3 : seat === mySeat ? 2 : 1,
+          borderColor: selected
+            ? theme.colors.ok
+            : seat === mySeat
+              ? theme.colors.gold
+              : theme.colors.border,
+          opacity: inactive ? 0.4 : 1,
+        },
+      ]}
+    >
+      <ScrollView style={styles.handsScroll} nestedScrollEnabled>
+        {content}
+      </ScrollView>
     </View>
   );
 }
@@ -123,18 +139,27 @@ export function TableView({
   onPressCard,
 }: TableViewProps) {
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [areaSize, setAreaSize] = useState({ width: 0, height: 0 });
+  const onAreaLayout = (event: LayoutChangeEvent) => {
+    setAreaSize({
+      width: event.nativeEvent.layout.width,
+      height: event.nativeEvent.layout.height,
+    });
+  };
   const onLayout = (event: LayoutChangeEvent) => {
     setSize({
       width: event.nativeEvent.layout.width,
       height: event.nativeEvent.layout.height,
     });
   };
-  const { width, height } = size;
-  const centerX = width / 2;
-  const radius = width * 0.42;
-  const top = height * 0.35;
-  const radiusY = Math.min(radius * 0.55, height - top - 60);
-  const seatWidth = width < 520 ? 90 : 110;
+  const { width: areaWidth, height: areaHeight } = areaSize;
+  const seatW = clamp(0.165 * areaWidth, 56, 120);
+  const seatH = clamp(0.3 * areaHeight, 56, 110);
+  const radius = Math.max(0, Math.min(
+    (areaWidth - seatW) / 2,
+    (areaHeight - seatH) / 0.6,
+  ));
+  const rowLayout = 0.416 * radius < seatW;
   const dealerCards = round?.dealer ?? [];
 
   return (
@@ -150,7 +175,7 @@ export function TableView({
         style={[
           styles.dealer,
           {
-            left: centerX - 90,
+            width: Math.min(size.width * 0.6, 260),
             borderWidth: round?.target?.kind === 'dealer' ? 3 : 1,
             borderColor:
               round?.target?.kind === 'dealer' ? theme.colors.ok : theme.colors.border,
@@ -178,35 +203,41 @@ export function TableView({
           <Text style={styles.cardText}>Crupier —</Text>
         )}
       </Pressable>
-      {Array.from({ length: 7 }, (_, index) => {
-        const seat = (index + 1) as SeatNumber;
-        const angle = Math.PI * (0.1 + (0.8 * index) / 6);
-        const x = centerX + radius * Math.cos(angle);
-        const y = top + radiusY * Math.sin(angle);
-        const hands = round?.hands[seat] ?? [];
-
-        return (
-          <View
-            key={seat}
-            style={[
-              styles.seatPosition,
-              { left: x - seatWidth / 2, top: y - 30 },
-            ]}
-          >
-            <Seat
-              seat={seat}
-              hands={hands}
-              mySeat={mySeat}
-              inactive={round ? !round.active[seat] : false}
-              selected={round?.target?.kind === 'seat' && round.target.seat === seat}
-              compact={width < 520}
-              onPressSeat={onPressSeat}
-              onLongPressSeat={onLongPressSeat}
-              onPressCard={onPressCard}
-            />
-          </View>
-        );
-      })}
+      <View onLayout={onAreaLayout} style={styles.seatArea}>
+        {(rowLayout ? [7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7]).map((number) => {
+          const seat = number as SeatNumber;
+          const hands = round?.hands[seat] ?? [];
+          const index = seat - 1;
+          const angle = Math.PI * (0.1 + (0.8 * index) / 6);
+          const x = areaWidth / 2 + radius * Math.cos(angle);
+          const y = radius * 0.6 * Math.sin(angle);
+          return (
+            <View
+              key={seat}
+              style={rowLayout
+                ? styles.rowSeat
+                : [styles.seatPosition, {
+                    left: x - seatW / 2,
+                    top: y + seatH / 2 - seatH / 2,
+                  }]}
+            >
+              <Seat
+                seat={seat}
+                hands={hands}
+                mySeat={mySeat}
+                inactive={round ? !round.active[seat] : false}
+                selected={round?.target?.kind === 'seat' && round.target.seat === seat}
+                width={rowLayout ? '100%' : seatW}
+                height={seatH}
+                fontSize={clamp(seatW / 5, 12, 18)}
+                onPressSeat={onPressSeat}
+                onLongPressSeat={onLongPressSeat}
+                onPressCard={onPressCard}
+              />
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -214,15 +245,13 @@ export function TableView({
 const styles = StyleSheet.create({
   table: {
     flex: 1,
-    minHeight: 120,
+    minHeight: 200,
     overflow: 'hidden',
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.felt,
   },
   dealer: {
-    position: 'absolute',
-    top: 8,
-    width: 180,
+    alignSelf: 'center',
     minHeight: theme.minTouch,
     alignItems: 'center',
     justifyContent: 'center',
@@ -235,18 +264,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  seatArea: {
+    flex: 1,
+    minHeight: 0,
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: 4,
+  },
   seatPosition: {
     position: 'absolute',
+  },
+  rowSeat: {
+    flex: 1,
+    minWidth: 0,
+    height: '100%',
+    alignItems: 'stretch',
   },
   seat: {
     minHeight: theme.minTouch,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 3,
+    justifyContent: 'flex-start',
+    padding: 2,
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.card,
   },
+  handsScroll: {
+    width: '100%',
+    height: '100%',
+  },
   seatHeader: {
+    width: '100%',
     minHeight: theme.minTouch,
     alignItems: 'center',
     justifyContent: 'center',
@@ -256,18 +305,20 @@ const styles = StyleSheet.create({
     fontSize: theme.text.xs,
   },
   hand: {
+    minHeight: theme.minTouch,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTouch: {
-    minWidth: theme.minTouch,
-    minHeight: theme.minTouch,
+    minWidth: 28,
+    minHeight: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   handTotalTouch: {
+    minWidth: 28,
     minHeight: theme.minTouch,
     alignItems: 'center',
     justifyContent: 'center',

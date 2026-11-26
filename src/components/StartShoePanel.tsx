@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { ShoeStatus } from '../core/session';
 import { SEATS, type SeatNumber } from '../core/table';
 import { theme } from '../ui/theme';
@@ -10,6 +10,8 @@ type StartShoePanelProps = {
 };
 
 export function StartShoePanel({ status, onStart, onObserve }: StartShoePanelProps) {
+  const { width } = useWindowDimensions();
+  const compact = width < 400;
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Inicio de zapato</Text>
@@ -18,14 +20,14 @@ export function StartShoePanel({ status, onStart, onObserve }: StartShoePanelPro
           ? 'Observando: espera el próximo zapato'
           : 'Elige tu asiento'}
       </Text>
-      <View style={styles.seats}>
+      <View style={[styles.seats, compact && styles.compactSeats]}>
         {SEATS.map((seat) => (
           <Pressable
             key={seat}
             accessibilityRole="button"
             accessibilityLabel={`Iniciar en el puesto ${seat}`}
             onPress={() => onStart(seat)}
-            style={styles.seatButton}
+            style={[styles.seatButton, compact && styles.compactSeatButton]}
           >
             <Text style={styles.seatLabel}>{seat}</Text>
           </Pressable>
@@ -64,17 +66,25 @@ const styles = StyleSheet.create({
   },
   seats: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    width: '100%',
   },
   seatButton: {
-    minWidth: theme.minTouch,
+    flex: 1,
+    minWidth: 0,
     minHeight: theme.minTouch,
     margin: theme.space.xs,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.card,
+  },
+  compactSeats: {
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  compactSeatButton: {
+    flex: 0,
+    flexBasis: '21%',
   },
   seatLabel: {
     color: theme.colors.text,

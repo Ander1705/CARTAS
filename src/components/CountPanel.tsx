@@ -23,56 +23,58 @@ export function CountPanel({ session, onMySeat }: CountPanelProps) {
       <View style={styles.row}>
         {shoe ? (
           <>
-            <Text style={styles.number}>Corrido {runningCount(shoe)}</Text>
-            <Text style={[styles.number, styles.realNumber]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Corrido {runningCount(shoe)}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, styles.realNumber]}>
               Real {trueCount(shoe).toFixed(1)}
             </Text>
-            <Text style={styles.number}>Mazos {decksRemaining(shoe).toFixed(1)}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Mazos {decksRemaining(shoe).toFixed(1)}</Text>
           </>
         ) : (
-          <Text style={styles.muted}>Corrido — · Real — · Mazos —</Text>
+          <>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Corrido —</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Real —</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Mazos —</Text>
+          </>
         )}
         {onMySeat && (
-          <View>
-            <Pressable
+          <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Cambiar asiento. Asiento ${session.mySeat ?? 'sin asignar'}`}
               accessibilityState={{ expanded: seatPickerOpen }}
               onPress={() => setSeatPickerOpen((open) => !open)}
               style={styles.seatToggle}
             >
-              <Text style={styles.seatToggleText}>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={styles.seatToggleText}>
                 Asiento {session.mySeat ?? '—'} ▾
               </Text>
             </Pressable>
-            {seatPickerOpen && (
-              <View style={styles.seatOptions}>
-                {SEATS.map((seat) => (
-                  <Pressable
-                    key={seat}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Cambiar asiento al puesto ${seat}`}
-                    onPress={() => {
-                      onMySeat(seat);
-                      setSeatPickerOpen(false);
-                    }}
-                    style={styles.seatOption}
-                  >
-                    <Text
-                      style={[
-                        styles.seatOptionText,
-                        seat === session.mySeat && styles.selectedSeat,
-                      ]}
-                    >
-                      {seat}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </View>
         )}
       </View>
+      {seatPickerOpen && onMySeat && (
+        <View style={styles.seatOptions}>
+          {SEATS.map((seat) => (
+            <Pressable
+              key={seat}
+              accessibilityRole="button"
+              accessibilityLabel={`Cambiar asiento al puesto ${seat}`}
+              onPress={() => {
+                onMySeat(seat);
+                setSeatPickerOpen(false);
+              }}
+              style={styles.seatOption}
+            >
+              <Text
+                style={[
+                  styles.seatOptionText,
+                  seat === session.mySeat && styles.selectedSeat,
+                ]}
+              >
+                {seat}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
       {shoe && (
         <View style={styles.progressTrack}>
           <View
@@ -101,14 +103,16 @@ const styles = StyleSheet.create({
   },
   warning: {
     color: theme.colors.warning,
+    minHeight: theme.minTouch,
+    textAlignVertical: 'center',
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
-    flexWrap: 'wrap',
   },
   number: {
+    flex: 1,
+    minWidth: 0,
     color: theme.colors.text,
     fontSize: theme.text.lg,
     ...theme.numbers,
@@ -120,7 +124,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
   },
   seatToggle: {
+    flex: 1,
+    minWidth: 0,
     minHeight: theme.minTouch,
+    alignItems: 'flex-end',
     justifyContent: 'center',
     paddingHorizontal: theme.space.xs,
   },
@@ -129,9 +136,10 @@ const styles = StyleSheet.create({
   },
   seatOptions: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   seatOption: {
-    minWidth: theme.minTouch,
+    flex: 1,
     minHeight: theme.minTouch,
     alignItems: 'center',
     justifyContent: 'center',

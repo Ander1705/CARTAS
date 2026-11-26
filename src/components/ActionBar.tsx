@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { RoundState } from '../core/table';
 import { theme } from '../ui/theme';
 
@@ -14,19 +14,21 @@ type Props = {
 };
 
 export function ActionBar(props: Props) {
-  const items: [string, boolean, () => void][] = [
-    ['Deshacer', props.canUndo, props.onUndo],
-    ['Rehacer', props.canRedo, props.onRedo],
-    ['Dividir', true, props.onSplit],
-    ['Siguiente', true, props.onNext],
+  const { width } = useWindowDimensions();
+  const compact = width < 400;
+  const items: [string, string, boolean, () => void][] = [
+    ['Deshacer', '↶', props.canUndo, props.onUndo],
+    ['Rehacer', '↷', props.canRedo, props.onRedo],
+    ['Dividir', 'Dividir', true, props.onSplit],
+    ['Siguiente', compact ? 'Sig.' : 'Siguiente', true, props.onNext],
     ...(props.round?.phase === 'done'
-      ? [['Nueva ronda', true, props.onFinish] as [string, boolean, () => void]]
+      ? [['Nueva ronda', compact ? 'Nueva' : 'Nueva ronda', true, props.onFinish] as [string, string, boolean, () => void]]
       : []),
   ];
 
   return (
     <View style={styles.container}>
-      {items.map(([label, enabled, action]) => (
+      {items.map(([label, text, enabled, action]) => (
         <Pressable
           key={label}
           accessibilityRole="button"
@@ -35,8 +37,13 @@ export function ActionBar(props: Props) {
           onPress={action}
           style={[styles.button, enabled ? styles.enabled : styles.disabled]}
         >
-          <Text style={[styles.label, !enabled && styles.disabledLabel]}>
-            {label}
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            style={[styles.label, !enabled && styles.disabledLabel]}
+          >
+            {text}
           </Text>
         </Pressable>
       ))}
@@ -47,14 +54,13 @@ export function ActionBar(props: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
   },
   button: {
-    minWidth: theme.minTouch,
+    flex: 1,
+    minWidth: 0,
     minHeight: theme.minTouch,
     margin: 2,
-    paddingHorizontal: theme.space.md,
+    paddingHorizontal: theme.space.xs,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radius.sm,
