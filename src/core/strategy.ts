@@ -7,6 +7,32 @@ export type StrategyAction = 'H' | 'S' | 'D' | 'Ds' | 'P' | 'R';
 export const DEALER_COLUMNS: readonly Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'A'];
 export interface StrategyTable { hard: Record<number, StrategyAction[]>; soft: Record<string, StrategyAction[]>; pairs: Record<string, StrategyAction[]>; }
 
+export interface Availability { hit: boolean; double: boolean; split: boolean; surrender: boolean; }
+
+export function lookupAction(hand: readonly Rank[], upcard: Rank, table: StrategyTable, can: Availability): 'H' | 'S' | 'D' | 'P' | 'R' {
+  const hard = hand.reduce((sum, rank) => sum + VALUE[rank], 0);
+  const soft = hand.includes('A') && hard + 10 <= 21;
+  const total = soft ? hard + 10 : hard;
+  const column = DEALER_COLUMNS.indexOf(upcard);
+  const hardSoftChoice = (): StrategyAction => soft
+    ? (total === 21 ? 'S' : total === 12 ? 'H' : table.soft[`A${total - 11}`][column])
+    : (total <= 4 ? 'H' : total >= 20 ? 'S' : table.hard[total][column]);
+  const choice = hand.length === 2 && hand[0] === hand[1] && can.split
+    ? table.pairs[`${hand[0]}${hand[0]}`][column]
+    : hardSoftChoice();
+  const resolve = (action: StrategyAction): 'H' | 'S' | 'D' | 'P' | 'R' => {
+    switch (action) {
+      case 'D': return can.double ? 'D' : 'H';
+      case 'Ds': return can.double ? 'D' : 'S';
+      case 'P': return can.split ? 'P' : resolve(hardSoftChoice());
+      case 'R': return can.surrender ? 'R' : 'H';
+      default: return action;
+    }
+  };
+  const action = resolve(choice);
+  return action === 'H' && !can.hit ? 'S' : action;
+}
+
 type HandEV = Pick<PlayerEVs, 'stand' | 'hit' | 'double' | 'surrender' | 'split'>;
 type AveragedEV = { [K in keyof HandEV]: number | null } & { stand: number };
 const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T'] as const;

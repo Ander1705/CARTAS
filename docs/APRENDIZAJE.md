@@ -54,6 +54,9 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **Estrategia generada** | El motor arma la tabla él solo: para cada celda calcula el EV de cada jugada y elige la mayor. No se escribe a mano |
 | **Promedio ponderado** | Un 16 duro puede ser 10+6 o 9+7. Se promedia el EV de las dos formas, dando más peso a la más frecuente (10+6, porque hay 16 dieces por mazo) |
 | **Prueba de regeneración** | Cambiar una regla (peek, rendición, DAS) y exigir que cambien EXACTAMENTE las celdas esperadas, ni una más |
+| **Monte Carlo** | Simular millones de manos al azar y medir el resultado promedio. Con 20 millones de rondas el margen es ±0,05 % |
+| **Error estándar** | Cuánto puede variar un promedio simulado solo por azar. "0,478 % ± 0,052 %" significa que el valor real está casi seguro entre 0,43 % y 0,53 % |
+| **Análisis combinatorio** | Sumar las probabilidades exactas de todas las manos iniciales en vez de simular. Es otra forma independiente de calcular la ventaja de la casa |
 | **Prueba aleatoria (property test)** | Generar miles de casos al azar y comprobar que una propiedad se cumple siempre, por ejemplo que el conteo es igual a la suma de las cartas vistas |
 
 ---
@@ -85,6 +88,8 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | 2026-11-26 | Cada variante de reglas se prueba en su propio archivo | Jest corre los archivos en paralelo: 4 tablas en ~75 s en lugar de ~5 min | Todas en un archivo |
 | 2026-11-26 | Índices I18 y Fab 4 tomados de la fuente publicada (bj21.com y blackjackstrategy.io coinciden; 6 mazos, S17, DAS) y verificados con el motor: 20 de 21 a ±1. 16 contra 10 publicado 0, derivado ≈ +1,5 para 10+6 (el 0 mezcla los 16 de varias cartas) | "Si no estás seguro de un índice, dilo". Se muestran como comparación; el cálculo exacto manda | Inventar o ajustar índices |
 | 2026-11-26 | La app muestra por separado: tabla, desviación por conteo y desviación por composición (adviseHand) | Así entiendes POR QUÉ cambia la jugada | Mostrar solo una recomendación |
+| 2026-11-26 | El Monte Carlo es un script aparte (`npm run sim`, con `tsx` solo de desarrollo), no una prueba | 20 millones de rondas tardan minutos: no deben frenar `npm test`. Las pruebas del simulador usan mazos preparados con resultado conocido | Meterlo en Jest |
+| 2026-11-26 | Ventaja de la casa validada por dos métodos: combinatorio (0,486 %) y Monte Carlo (0,478 % ± 0,052 %) con las reglas de referencia. Tu mesa: 0,211 % ± 0,052 % simulado (0,296 % combinatorio sin re-dividir ases) | La diferencia en tu mesa se explica, de forma plausible, por re-dividir ases, que el combinatorio no modela | Confiar en un solo método |
 | 2026-11-25 | Los oráculos del arquitecto se guardan en `tools/oraculos/` | Así se puede repetir la verificación en cualquier momento | Dejarlos en una carpeta temporal |
 | 2026-11-25 | El zapato es inmutable y el conteo se deriva de él | Una sola fuente de verdad, y deshacer y rehacer salen gratis en la Fase 4 | Guardar el conteo aparte (puede desincronizarse) |
 
