@@ -1,0 +1,80 @@
+# Cuaderno de aprendizaje — Contador Hi-Lo
+
+Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres partes: el glosario, las decisiones con su porqué y los errores que cometimos, con lo que aprendimos de cada uno.
+
+---
+
+## 1. Glosario
+
+### Blackjack y conteo
+| Término | Qué es | Ejemplo |
+|---|---|---|
+| **Hi-Lo** | Sistema de conteo: 2-6 = +1, 7-9 = 0, 10/J/Q/K/A = −1 | Salen 5, K, 3 → +1 −1 +1 = **+1** |
+| **Conteo corrido** | Suma de los valores Hi-Lo de todas las cartas vistas desde que se barajó | Va subiendo y bajando carta a carta |
+| **Conteo real** | Conteo corrido ÷ mazos que quedan. Permite comparar zapatos de distinto tamaño | Corrido +6 con 3 mazos restantes → real **+2** |
+| **Conteo balanceado** | El zapato completo suma 0 | 1 mazo: +20 (2-6) + 0 (7-9) −20 (10s y A) = 0 |
+| **Zapato** | Caja con varios mazos barajados juntos (en tu mesa, unos 8) | 8 mazos = 416 cartas |
+| **Penetración** | Porcentaje del zapato repartido antes de barajar | Corte al 75 % → se reparten ~312 de 416 cartas |
+| **S17** | El crupier se planta con cualquier 17, también con el 17 suave (A+6) | Confirmado en tu mesa |
+| **DAS** | Se puede doblar después de dividir (*Double After Split*) | Por confirmar |
+| **Peek** | Con un A o un 10 visible, el crupier mira la tapada para ver si tiene blackjack | Por confirmar |
+| **EV** (valor esperado) | Lo que ganas o pierdes **en promedio** por unidad apostada con una jugada | EV −0,12 = pierdes 12 centavos por cada peso, en promedio |
+| **Estrategia básica** | La mejor jugada para cada mano según las reglas, sin contar cartas | 16 contra un 10 visible → pedir |
+| **Desviación por conteo** | Cambiar la jugada básica cuando el conteo real pasa de un índice | Illustrious 18: 16 contra 10 → plantarse si el conteo real ≥ 0 |
+| **Desviación por composición** | Cambiar la jugada porque el EV calculado con las cartas reales que quedan así lo indica | Se explica en la Fase 3 |
+
+### Programación
+| Término | Qué es |
+|---|---|
+| **Expo** | Herramienta sobre React Native para tener una sola base de código para Android, iOS y web |
+| **expo-router** | Navegación por archivos: cada archivo en `src/app/` es una pantalla con su URL |
+| **TypeScript** | JavaScript con tipos; detecta errores antes de ejecutar el código |
+| **Jest** | Corre las pruebas automáticas (`npm.cmd test`) |
+| **ESLint** | Revisa el código buscando errores y malas prácticas (`npm.cmd run lint`) |
+| **SQLite** | Base de datos que vive dentro del dispositivo, sin servidor |
+| **Upsert** | "Inserta, y si ya existe, actualiza": `INSERT … ON CONFLICT … DO UPDATE` |
+| **Inyección SQL** | Ataque en el que un texto se ejecuta como código SQL. Se evita con parámetros `?` |
+| **WebAssembly (wasm)** | Código compilado que el navegador ejecuta rápido; así corre SQLite en la web |
+| **COOP/COEP** | Dos cabeceras HTTP que permiten la memoria compartida; SQLite en la web las necesita |
+| **Sandbox** | Entorno aislado donde corre Codex, con permisos limitados de red y de escritura |
+| **Commit / push** | Guardar una foto de los cambios en git y subirla a GitHub |
+
+---
+
+## 2. Decisiones y su porqué
+
+| Fecha | Decisión | Por qué | Alternativa descartada |
+|---|---|---|---|
+| 2026-11-25 | React Native + Expo + TypeScript | Una sola base de código para celular, tablet y PC; ya conoces React Native | Angular + Ionic: sin una ventaja clara para este caso |
+| 2026-11-25 | La lógica en `src/core`, sin React ni Expo, **vigilado por ESLint** | Se prueba aislada y miles de veces sin abrir la app. La máquina hace cumplir la regla | Mezclar lógica y pantallas: errores difíciles de encontrar |
+| 2026-11-25 | expo-router | Pantallas por archivo y URLs en la web | Navegación manual: más trabajo en la Fase 4 |
+| 2026-11-25 | Jest (jest-expo) | Una sola herramienta de pruebas para el core y la interfaz | Vitest: más rápido, pero serían dos herramientas |
+| 2026-11-25 | **SQLite local** con SQL compatible con PostgreSQL | Funciona sin internet en la mesa y respeta "sin backend". Lo que aprendes de SQL te sirve para PostgreSQL | PostgreSQL directo: exige servidor e internet |
+| 2026-11-25 | La web en modo `static` | Se publica gratis como archivos sueltos, sin servidor | Modo `server`: necesita un servidor encendido |
+| 2026-11-25 | Hosting futuro: Cloudflare Pages, Netlify o Vercel | SQLite en la web exige cabeceras COOP/COEP | GitHub Pages: no permite cabeceras propias |
+| 2026-11-25 | J, Q y K se guardan como un solo rango `'T'` | Para el conteo y la estrategia solo importa que valen 10. Probabilidades directas: P(10) = 16/52 | 13 rangos internos: más casos sin ningún beneficio |
+| 2026-11-25 | `parseRank` rechaza entradas raras (`'1O'`, `'11'`, `'00'`) | Una carta mal tecleada tiene que fallar de forma visible, no contar mal en silencio | Aceptar y adivinar |
+
+---
+
+## 3. Errores que tuvimos y qué aprendimos
+
+| Error | Causa | Solución | Lección |
+|---|---|---|---|
+| Codex no pudo crear el proyecto (`npm error EACCES`) | Su sandbox no tenía internet | Habilitar la red en `~/.codex/config.toml` (respaldo en `config.toml.bak`) | Las herramientas aisladas necesitan permisos explícitos para descargar |
+| La carpeta temporal estaba fuera del proyecto | El sandbox solo deja escribir dentro del proyecto | Crearla en `cartas/.tmp-app` | Revisar **dónde** puede escribir cada herramienta |
+| `npm.ps1 … la ejecución de scripts está deshabilitada` | La política de PowerShell de Windows bloquea scripts `.ps1` | Usar `npm.cmd` y `npx.cmd` | En Windows, `npm` es un script de PowerShell; la versión `.cmd` lo esquiva sin tocar la seguridad |
+| La plantilla traía la web en modo `server` y el nombre `.tmp-app` | Valores por defecto de la plantilla | Revisar y corregir `app.json` | Nunca aceptar una plantilla sin revisarla: trae supuestos que no son los tuyos |
+| Codex dijo "cambié la configuración" sin decir qué | Reporte impreciso | Revisar el diff con `git diff`: no había ningún cambio | **Verificar, no confiar:** el diff dice la verdad, el reporte no siempre |
+
+---
+
+## 4. Cómo ejecutar y verificar
+
+```powershell
+cd C:\Users\ander\Desktop\cartas
+npx.cmd expo start          # servidor; w = navegador, QR o exp://<IP>:8081 = celular
+npm.cmd test                # pruebas
+npm.cmd run lint            # estilo y reglas (incluida "core sin React")
+npm.cmd run typecheck       # tipos
+```
