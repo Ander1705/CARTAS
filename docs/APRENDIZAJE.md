@@ -45,6 +45,10 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **Probabilidad condicionada** | Recalcular sabiendo algo nuevo. Con peek y un A visible sin blackjack, se descartan los 10 como tapada: P(A) = 31/287 en lugar de 31/415 |
 | **Memoización** | Guardar el resultado de un cálculo para no repetirlo. El crupier llega al mismo estado (las mismas cartas restantes y el mismo total) por muchos caminos; se calcula una sola vez |
 | **Oráculo** | Una implementación o tabla de referencia independiente contra la que se compara el código. El arquitecto escribe su propio cálculo del crupier y lo compara con el de Codex |
+| **EV recursivo de "pedir"** | El valor de pedir = Σ P(carta) × (lo mejor entre plantarse y seguir pidiendo con esa carta). Se repite hasta plantarse o pasarse, y se memoiza por las cartas que quedan |
+| **Tapada condicionada (peek)** | Con A visible y sin blackjack, la tapada "no es 10", pero el jugador no sabe cuál es. P(tu próxima carta = r) = c_r·(M − [r permitido]) / (M·(N−1)), con N = no vistas y M = las que pueden ser tapada |
+| **Fuerza bruta** | Probar TODAS las posibilidades, sin fórmulas. Solo sirve en casos pequeños, pero es la verificación más honesta |
+| **Prueba de mutación** | Romper el código a propósito y comprobar que las pruebas lo detectan. Si no lo detectan, las pruebas no sirven |
 | **Prueba aleatoria (property test)** | Generar miles de casos al azar y comprobar que una propiedad se cumple siempre, por ejemplo que el conteo es igual a la suma de las cartas vistas |
 
 ---
@@ -68,6 +72,9 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | 2026-11-25 | Reglas por confirmar con valores por defecto marcados (DAS sí, rendición no, peek sí, 4 manos al dividir, sin resplit de ases, sin pedir sobre ases divididos, doblar con cualquier mano) | La app funciona desde el día 1 sin asumir nada en silencio: la interfaz mostrará "por confirmar" | Bloquear la app hasta confirmar |
 | 2026-11-25 | Las probabilidades usan todas las cartas no vistas (incluidas la quemada y la tapada) | Una carta desconocida es tan aleatoria como cualquier otra no vista: así se calcula la probabilidad exacta | Ignorar la quemada (sesgo) |
 | 2026-11-25 | Probabilidades del crupier exactas, por recursión con memoización | Exactitud total con la composición real, en milisegundos | Simular al azar (aproximado y lento) |
+| 2026-11-25 | EV exacto de plantarse, pedir, doblar y rendirse con las cartas reales (`ev.ts`) | "Cero tolerancia": se calcula exacto, no se simula | Monte Carlo por mano (aproximado y lento) |
+| 2026-11-25 | Sin peek se usa la regla europea ENHC: el blackjack del crupier se lleva todo lo apostado, también lo doblado. Por confirmar | Es lo habitual cuando el crupier no mira la tapada | Perder solo la apuesta original (OBO) |
+| 2026-11-25 | Los oráculos del arquitecto se guardan en `tools/oraculos/` | Así se puede repetir la verificación en cualquier momento | Dejarlos en una carpeta temporal |
 | 2026-11-25 | El zapato es inmutable y el conteo se deriva de él | Una sola fuente de verdad, y deshacer y rehacer salen gratis en la Fase 4 | Guardar el conteo aparte (puede desincronizarse) |
 
 ---
@@ -83,6 +90,7 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | Codex dijo "cambié la configuración" sin decir qué | Reporte impreciso | Revisar el diff con `git diff`: no había ningún cambio | **Verificar, no confiar:** el diff dice la verdad, el reporte no siempre |
 | Codex "editó las pruebas" tras un primer fallo (Fase 1) | Repartía más de 4 ases en un zapato de 1 mazo | Revisar línea por línea que ningún valor esperado cambió; solo cambió qué cartas se reparten | Cuando alguien cambia una prueba para que pase, se revisa siempre: puede ser legítimo o puede esconder un error |
 | La primera versión de `dealer.ts` clasificaba mal el blackjack (Fase 2) | Confundía qué estado representa "2 cartas" | Codex corrigió su código, no las pruebas; el arquitecto lo comparó con su oráculo en 400 zapatos | Las pruebas con valores calculados aparte atrapan errores sutiles que el autor del código no ve |
+| El primer oráculo de EV del arquitecto daba "pedir" demasiado bueno contra A y 10 (Fase 3) | Enumeraba la tapada por fuera y el jugador decidía **conociéndola** | La tapada queda desconocida en cada decisión, con la fórmula condicionada. Se confirmó con fuerza bruta (395 zapatos) y con una prueba de mutación | Al arquitecto también se le escapan errores: compararlo con valores publicados (16 contra 10 ≈ empate) y con un método totalmente distinto lo atrapó |
 | Codex dejó una prueba de relleno que no comprobaba nada útil | Exceso de celo por "cubrir" funciones auxiliares | Eliminarla | Una prueba que no puede fallar no prueba nada |
 
 ---
