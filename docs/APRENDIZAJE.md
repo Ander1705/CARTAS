@@ -49,6 +49,9 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **Tapada condicionada (peek)** | Con A visible y sin blackjack, la tapada "no es 10", pero el jugador no sabe cuál es. P(tu próxima carta = r) = c_r·(M − [r permitido]) / (M·(N−1)), con N = no vistas y M = las que pueden ser tapada |
 | **Fuerza bruta** | Probar TODAS las posibilidades, sin fórmulas. Solo sirve en casos pequeños, pero es la verificación más honesta |
 | **Prueba de mutación** | Romper el código a propósito y comprobar que las pruebas lo detectan. Si no lo detectan, las pruebas no sirven |
+| **Estrategia generada** | El motor arma la tabla él solo: para cada celda calcula el EV de cada jugada y elige la mayor. No se escribe a mano |
+| **Promedio ponderado** | Un 16 duro puede ser 10+6 o 9+7. Se promedia el EV de las dos formas, dando más peso a la más frecuente (10+6, porque hay 16 dieces por mazo) |
+| **Prueba de regeneración** | Cambiar una regla (peek, rendición, DAS) y exigir que cambien EXACTAMENTE las celdas esperadas, ni una más |
 | **Prueba aleatoria (property test)** | Generar miles de casos al azar y comprobar que una propiedad se cumple siempre, por ejemplo que el conteo es igual a la suma de las cartas vistas |
 
 ---
@@ -76,6 +79,8 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | 2026-11-25 | Sin peek se usa la regla europea ENHC: el blackjack del crupier se lleva todo lo apostado, también lo doblado. Por confirmar | Es lo habitual cuando el crupier no mira la tapada | Perder solo la apuesta original (OBO) |
 | 2026-11-25 | EV de dividir APROXIMADO: 2 × EV de una mano que empieza con una sola carta de la pareja, sin re-dividir, y cada mano ignora las cartas de la otra | `CLAUDE.md` lo permite marcándolo. El exacto (re-dividir, manos dependientes) es muchísimo más caro. Re-dividir subiría un poco el EV de dividir | Dividir exacto |
 | 2026-11-25 | La tabla de referencia de `CLAUDE.md` se verificó contra Wikipedia (4-8 mazos, H17, DAS; cita a Wizard of Odds), más los 6 cambios para S17 que declara la misma página: coincide celda por celda. La tabla sin DAS no se encontró publicada (Wizard no carga, otra fuente da 403) | "La fuente manda": hay que verificar antes de usar la tabla como oráculo | Confiar en la memoria |
+| 2026-11-26 | Tabla generada: duros = promedio ponderado de las combinaciones de 2 cartas sin pareja; suaves = A,x; parejas = x,x. Una caché por columna | Es lo comparable con las tablas publicadas. Con tu mano real en la mesa se usarán tus cartas exactas (diferencia = "desviación por composición", paso 3.4) | Una mano representativa por total (sesgada) |
+| 2026-11-26 | Cada variante de reglas se prueba en su propio archivo | Jest corre los archivos en paralelo: 4 tablas en ~75 s en lugar de ~5 min | Todas en un archivo |
 | 2026-11-25 | Los oráculos del arquitecto se guardan en `tools/oraculos/` | Así se puede repetir la verificación en cualquier momento | Dejarlos en una carpeta temporal |
 | 2026-11-25 | El zapato es inmutable y el conteo se deriva de él | Una sola fuente de verdad, y deshacer y rehacer salen gratis en la Fase 4 | Guardar el conteo aparte (puede desincronizarse) |
 

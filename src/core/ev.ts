@@ -4,11 +4,12 @@ import type { Rules } from './rules';
 import type { ShoeState } from './shoe';
 
 export interface PlayerEVs { stand: number; hit: number | null; double: number | null; surrender: number | null; split: number | null; }
+export interface EVCache { dealer: Map<string, number[]>; hit: Map<string, number>; }
 
 const VALUE: Readonly<Record<Rank, number>> = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10 };
 const bestTotal = (hard: number, hasAce: boolean): number => hasAce && hard + 10 <= 21 ? hard + 10 : hard;
 
-export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, rules: Rules, splitHands = 1): PlayerEVs {
+export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, rules: Rules, splitHands = 1, cache?: EVCache): PlayerEVs {
   // For split hands, hand[0] must be the original card from the pair.
   if (!Number.isInteger(splitHands) || splitHands < 1) throw new Error('splitHands debe ser un entero ≥ 1');
   const fromSplit = splitHands >= 2;
@@ -23,7 +24,8 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
   const counts = RANKS.map((rank) => shoe.unseen[rank]);
   const countTotal = (): number => counts.reduce((sum, count) => sum + count, 0);
   const forbidden = rules.dealerPeeks && upcard === 'A' ? 'T' : rules.dealerPeeks && upcard === 'T' ? 'A' : undefined;
-  const dealerCache = new Map<string, number[]>();
+  // cache: solo compartir entre llamadas con la misma carta visible y las mismas reglas
+  const dealerCache = cache?.dealer ?? new Map<string, number[]>();
   const recordCounts = (): Record<Rank, number> => Object.fromEntries(RANKS.map((rank, i) => [rank, counts[i]])) as Record<Rank, number>;
   const dealer = (): DealerDistribution => dealerDistribution({ ...shoe, unseen: recordCounts() }, upcard, { hitSoft17: rules.dealerHitsSoft17, peekedNoBlackjack: forbidden !== undefined }, dealerCache);
   const probabilities = (): number[] => {
@@ -41,7 +43,7 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
   };
   const dRoot = dealer();
   const stand = standEV(total, dRoot);
-  const memo = new Map<string, number>();
+  const memo = cache?.hit ?? new Map<string, number>();
   const hitValue = (playerHard: number, playerAce: boolean): number => {
     const key = `${counts.join(',')}|${playerHard}|${playerAce ? 1 : 0}`;
     const cached = memo.get(key);

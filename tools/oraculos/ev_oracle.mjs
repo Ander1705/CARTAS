@@ -7,8 +7,10 @@ const VAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const best = (hard, ace) => (ace && hard + 10 <= 21 ? hard + 10 : hard);
 
 // Distribución final del crupier desde sus cartas conocidas. Devuelve {17..21, bust, bj}.
+// Memoria del crupier compartida dentro de una llamada a playerEVs (misma visible y reglas).
+let SHARED = new Map();
 function dealer(c, cards, hitSoft17) {
-  const memo = new Map();
+  const memo = SHARED;
   function play(hard, ace, n) {
     const b = best(hard, ace);
     if (b > 21) return { bust: 1 };
@@ -48,10 +50,11 @@ function standEV(p, d) {
 
 // Estado = zapato c que INCLUYE la tapada. Con peek y A/T visible, la tapada es uniforme entre las cartas
 // de c que no dan blackjack (f = rango prohibido). El jugador nunca conoce la tapada al decidir.
-export function playerEVs(counts, hand, up, rules) {
+export function playerEVs(counts, hand, up, rules, cache) {
+  SHARED = cache ? cache.dealer : new Map();
   const c = counts.slice();
   const f = rules.peek && (up === 0 || up === 9) ? (up === 0 ? 9 : 0) : -1;
-  const memo = new Map();
+  const memo = cache ? cache.hit : new Map();
   const total = () => c.reduce((a, b) => a + b, 0);
   // Probabilidad de que la próxima carta del jugador sea de rango r (sin reposición, tapada condicionada).
   function drawProbs() {
