@@ -23,8 +23,9 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
   const counts = RANKS.map((rank) => shoe.unseen[rank]);
   const countTotal = (): number => counts.reduce((sum, count) => sum + count, 0);
   const forbidden = rules.dealerPeeks && upcard === 'A' ? 'T' : rules.dealerPeeks && upcard === 'T' ? 'A' : undefined;
+  const dealerCache = new Map<string, number[]>();
   const recordCounts = (): Record<Rank, number> => Object.fromEntries(RANKS.map((rank, i) => [rank, counts[i]])) as Record<Rank, number>;
-  const dealer = (): DealerDistribution => dealerDistribution({ ...shoe, unseen: recordCounts() }, upcard, { hitSoft17: rules.dealerHitsSoft17, peekedNoBlackjack: forbidden !== undefined });
+  const dealer = (): DealerDistribution => dealerDistribution({ ...shoe, unseen: recordCounts() }, upcard, { hitSoft17: rules.dealerHitsSoft17, peekedNoBlackjack: forbidden !== undefined }, dealerCache);
   const probabilities = (): number[] => {
     const n = countTotal();
     if (forbidden === undefined) return counts.map((count) => count / n);

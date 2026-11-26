@@ -8,10 +8,11 @@ export interface DealerOptions { hitSoft17: boolean; peekedNoBlackjack: boolean;
 const OUTCOMES: readonly DealerOutcome[] = ['17', '18', '19', '20', '21', 'bust', 'blackjack'];
 const VALUE: Readonly<Record<Rank, number>> = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10 };
 
-export function dealerDistribution(shoe: ShoeState, upcard: Rank, options: DealerOptions): DealerDistribution {
+export function dealerDistribution(shoe: ShoeState, upcard: Rank, options: DealerOptions, cache?: Map<string, number[]>): DealerDistribution {
   const initial = RANKS.map((rank) => shoe.unseen[rank]);
   const result: Record<DealerOutcome, number> = { '17': 0, '18': 0, '19': 0, '20': 0, '21': 0, bust: 0, blackjack: 0 };
-  const memo = new Map<string, number[]>();
+  // cache: solo compartir entre llamadas con la misma carta visible y las mismas opciones
+  const memo = cache ?? new Map<string, number[]>();
   const holeForbidden = options.peekedNoBlackjack && upcard === 'A' ? 'T'
     : options.peekedNoBlackjack && upcard === 'T' ? 'A' : undefined;
 

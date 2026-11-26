@@ -53,4 +53,14 @@ describe('dealerDistribution', () => {
     for (const upcard of RANKS) dealerDistribution(fullShoe(upcard), upcard, options());
     expect(Date.now() - start).toBeLessThan(10000);
   });
+  it('D15: shared cache gives identical results', () => {
+    let firstShoe = newShoe({ decks: 8, burnCards: 0, cutPenetration: 1 });
+    firstShoe = dealSeen(dealSeen(dealSeen(firstShoe, 'T'), '6'), 'T');
+    const secondShoe = dealSeen(firstShoe, '5');
+    const dealerOptions = options(false, true);
+    const sharedCache = new Map<string, number[]>();
+
+    expect(dealerDistribution(firstShoe, 'T', dealerOptions, sharedCache)).toEqual(dealerDistribution(firstShoe, 'T', dealerOptions));
+    expect(dealerDistribution(secondShoe, 'T', dealerOptions, sharedCache)).toEqual(dealerDistribution(secondShoe, 'T', dealerOptions));
+  });
 });
