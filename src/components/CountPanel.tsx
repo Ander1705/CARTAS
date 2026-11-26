@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { estimatedEdge, light, noBetStatus, suggestedBet, type BetConfig } from '../core/betting';
 import { runningCount, trueCount, decksRemaining } from '../core/hilo';
 import type { TableSession } from '../core/session';
 import { penetration } from '../core/shoe';
@@ -9,51 +9,41 @@ import { seatsLeftToRight, theme } from '../ui/theme';
 
 type CountPanelProps = {
   session: TableSession;
-  onMySeat?(seat: SeatNumber): void;
-  onEndShoe?(): void;
+  bet: BetConfig;
+  onMySeat(seat: SeatNumber): void;
+  onSettings(): void;
   large?: boolean;
 };
+
+const signal = {
+  gray: { text: 'Apuesta mínima', color: theme.colors.neutral, tint: theme.colors.card },
+  yellow: { text: 'Sube moderado', color: theme.colors.warning, tint: '#22281A' },
+  green: { text: 'Entra: sube la apuesta', color: theme.colors.ok, tint: '#123321' },
+} as const;
+
+export const cop = (value: number) => `$${Math.round(value).toLocaleString('es-CO')}`;
 
 function signed(value: number, digits = 0) {
   const text = value.toFixed(digits);
   return value > 0 ? `+${text}` : text;
 }
 
-export function CountPanel({ session, onMySeat, onEndShoe, large = false }: CountPanelProps) {
+export function CountPanel({ session, bet, onMySeat, onSettings, large = false }: CountPanelProps) {
   const [seatPickerOpen, setSeatPickerOpen] = useState(false);
-  const [confirmEnd, setConfirmEnd] = useState(false);
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shoe = session.round?.shoe;
   const tc = shoe ? trueCount(shoe) : null;
   const tcColor = tc === null || Math.abs(tc) < 1
     ? theme.colors.text
     : tc > 0 ? theme.colors.ok : theme.colors.danger;
-
-  useEffect(() => () => {
-    if (confirmTimer.current) clearTimeout(confirmTimer.current);
-  }, []);
-
-  const pressEndShoe = () => {
-    if (confirmEnd) {
-      if (confirmTimer.current) clearTimeout(confirmTimer.current);
-      confirmTimer.current = null;
-      setConfirmEnd(false);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      onEndShoe?.();
-      return;
-    }
-    setConfirmEnd(true);
-    confirmTimer.current = setTimeout(() => {
-      setConfirmEnd(false);
-      confirmTimer.current = null;
-    }, 3000);
-  };
+  const lit = light(tc ?? 0, bet);
+  const sig = signal[lit.light];
+  const amount = suggestedBet(tc ?? 0, bet);
+  const edge = estimatedEdge(tc ?? 0, bet);
+  const noBet = noBetStatus(session.noBetStreak, bet.maxNoBetHands);
 
   return (
-    <View style={[styles.panel, large && styles.largePanel]}>
-      {session.status === 'lastRound' && (
-        <Text style={styles.warning}>Última ronda: después se baraja</Text>
-      )}
+    <View style={[styles.panel, large && styles.largePanel,
+      { backgroundColor: sig.tint, borderColor: sig.color }]}>
       <View style={[styles.row, large && styles.largeRow]}>
         <View accessible accessibilityLabel={`Conteo real ${tc === null ? 'sin datos' : signed(tc, 1)}`}>
           <Text style={[styles.tc, large && styles.largeTc, { color: tcColor }]}>
@@ -61,44 +51,40 @@ export function CountPanel({ session, onMySeat, onEndShoe, large = false }: Coun
           </Text>
           <Text style={styles.caption}>conteo real</Text>
         </View>
-        <View style={styles.stats}>
+        <View style={styles.stats} accessibilityLiveRegion="polite">
+          <Text numberOfLines={1} style={[styles.signal, { color: sig.color }]}>{sig.text}</Text>
           <Text numberOfLines={1} style={styles.stat}>
-            Corrido <Text style={styles.statValue}>{shoe ? signed(runningCount(shoe)) : '—'}</Text>
+            Apuesta <Text style={styles.statValue}>{amount ? cop(amount) : 'sin capital'}</Text>
+            {'  '}ventaja ≈ <Text style={styles.statValue}>{(edge * 100).toFixed(1).replace('.', ',')} %</Text>
           </Text>
           <Text numberOfLines={1} style={styles.stat}>
-            Mazos <Text style={styles.statValue}>{shoe ? decksRemaining(shoe).toFixed(1) : '—'}</Text>
+            Corrido <Text style={styles.statValue}>{shoe ? signed(runningCount(shoe)) : '—'}</Text>
+            {'  '}Mazos <Text style={styles.statValue}>{shoe ? decksRemaining(shoe).toFixed(1) : '—'}</Text>
           </Text>
         </View>
         <View style={styles.buttons}>
-          {onMySeat && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Cambiar asiento. Asiento ${session.mySeat ?? 'sin asignar'}`}
-              accessibilityState={{ expanded: seatPickerOpen }}
-              onPress={() => setSeatPickerOpen((open) => !open)}
-              style={({ hovered, pressed }) => [styles.button, (hovered || pressed) && styles.active]}
-            >
-              <Text numberOfLines={1} style={styles.buttonText}>
-                Asiento {session.mySeat ?? '—'} ▾
-              </Text>
-            </Pressable>
-          )}
-          {onEndShoe && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Nuevo zapato: reinicia el conteo"
-              onPress={pressEndShoe}
-              style={({ hovered, pressed }) => [styles.button,
-                confirmEnd && styles.confirm, (hovered || pressed) && styles.active]}
-            >
-              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.buttonText, confirmEnd && styles.confirmText]}>
-                {confirmEnd ? '¿Seguro? Toca otra vez' : 'Nuevo zapato'}
-              </Text>
-            </Pressable>
-          )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Cambiar asiento. Asiento ${session.mySeat ?? 'sin asignar'}`}
+            accessibilityState={{ expanded: seatPickerOpen }}
+            onPress={() => setSeatPickerOpen((open) => !open)}
+            style={({ hovered, pressed }) => [styles.button, (hovered || pressed) && styles.active]}
+          >
+            <Text numberOfLines={1} style={styles.buttonText}>
+              Asiento {session.mySeat ?? '—'} ▾
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ajustes: apuestas, zapato, reglas y sesiones"
+            onPress={onSettings}
+            style={({ hovered, pressed }) => [styles.button, (hovered || pressed) && styles.active]}
+          >
+            <Text numberOfLines={1} style={styles.buttonText}>Ajustes</Text>
+          </Pressable>
         </View>
       </View>
-      {seatPickerOpen && onMySeat && (
+      {seatPickerOpen && (
         <View style={styles.seatOptions}>
           {seatsLeftToRight.map((seat) => (
             <Pressable
@@ -119,6 +105,21 @@ export function CountPanel({ session, onMySeat, onEndShoe, large = false }: Coun
             </Pressable>
           ))}
         </View>
+      )}
+      {session.status === 'lastRound' && (
+        <Text style={styles.warning}>Última ronda: después se baraja</Text>
+      )}
+      {lit.negative && (
+        <Text style={styles.warning}>
+          Conteo muy negativo: apuesta mínima y piensa en cambiar de mesa al acabar el zapato
+        </Text>
+      )}
+      {noBet !== 'ok' && (
+        <Text accessibilityLiveRegion="assertive" style={[styles.warning, noBet === 'limit' && styles.limit]}>
+          {noBet === 'limit'
+            ? `Llevas ${session.noBetStreak} manos sin apostar: apuesta ya (mínimo)`
+            : 'La próxima ronda DEBES apostar (mínimo)'}
+        </Text>
       )}
       {shoe && (
         <View
@@ -141,12 +142,17 @@ const styles = StyleSheet.create({
     paddingVertical: theme.space.sm,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.card,
     gap: theme.space.xs,
   },
   largePanel: { padding: theme.space.lg },
-  warning: { color: theme.colors.warning, fontWeight: '700' },
+  warning: { color: theme.colors.warning, fontWeight: '700', fontSize: theme.text.sm },
+  limit: {
+    color: theme.colors.background,
+    backgroundColor: theme.colors.danger,
+    paddingHorizontal: theme.space.sm,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
   largeRow: { flexWrap: 'wrap' },
   tc: {
@@ -159,6 +165,7 @@ const styles = StyleSheet.create({
   largeTc: { fontSize: 56, lineHeight: 60 },
   caption: { color: theme.colors.textMuted, fontSize: theme.text.xs },
   stats: { flex: 1, minWidth: 0, gap: 2 },
+  signal: { fontSize: theme.text.md, fontWeight: '800' },
   stat: { color: theme.colors.textMuted, fontSize: theme.text.sm },
   statValue: { color: theme.colors.text, fontWeight: '700', ...theme.numbers },
   buttons: { gap: theme.space.xs, alignItems: 'stretch' },
@@ -171,9 +178,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   active: { backgroundColor: theme.colors.surfaceHi },
-  confirm: { borderColor: theme.colors.danger },
   buttonText: { color: theme.colors.gold, fontSize: theme.text.sm, fontWeight: '600' },
-  confirmText: { color: theme.colors.danger },
   seatOptions: { flexDirection: 'row', gap: 4 },
   seatOption: {
     flex: 1,

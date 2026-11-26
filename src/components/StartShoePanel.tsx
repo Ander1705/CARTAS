@@ -7,9 +7,10 @@ type StartShoePanelProps = {
   status: ShoeStatus;
   onStart(seat: SeatNumber): void;
   onObserve(): void;
+  onSettings(): void;
 };
 
-export function StartShoePanel({ status, onStart, onObserve }: StartShoePanelProps) {
+export function StartShoePanel({ status, onStart, onObserve, onSettings }: StartShoePanelProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Zapato nuevo</Text>
@@ -45,6 +46,14 @@ export function StartShoePanel({ status, onStart, onObserve }: StartShoePanelPro
         style={({ hovered, pressed }) => [styles.observe, (hovered || pressed) && styles.spotActive]}
       >
         <Text style={styles.observeText}>Llegué a mitad de zapato: solo observar</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Ajustes: capital, apuestas, reglas, perfiles y sesiones"
+        onPress={onSettings}
+        style={({ hovered, pressed }) => [styles.observe, (hovered || pressed) && styles.spotActive]}
+      >
+        <Text style={styles.observeText}>Ajustes: capital, apuestas, reglas e historial</Text>
       </Pressable>
       <Text style={styles.disclaimer}>
         Herramienta de práctica. No garantiza ganancias; juega con responsabilidad.
