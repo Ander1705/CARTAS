@@ -10,6 +10,7 @@ import {
 import type { Rank } from '../core/cards';
 import type { RoundState, SeatNumber, Target } from '../core/table';
 import { theme } from '../ui/theme';
+import { PlayingCard } from './PlayingCard';
 
 type TableViewProps = {
   round: RoundState | null;
@@ -29,6 +30,8 @@ type SeatProps = {
   width: number | `${number}%`;
   height: number;
   fontSize: number;
+  cardSize: number;
+  round: RoundState | null;
   onPressSeat(seat: SeatNumber, hand: number): void;
   onLongPressSeat(seat: SeatNumber): void;
   onPressCard(target: Target, index: number): void;
@@ -59,10 +62,13 @@ function Seat({
   width,
   height,
   fontSize,
+  cardSize,
+  round,
   onPressSeat,
   onLongPressSeat,
   onPressCard,
 }: SeatProps) {
+  const lastTarget = round?.log[round.log.length - 1]?.target;
   const content = (
     <>
       <Pressable
@@ -71,7 +77,9 @@ function Seat({
         delayLongPress={500}
         onPress={() => onPressSeat(seat, 0)}
         onLongPress={() => onLongPressSeat(seat)}
-        style={styles.seatHeader}
+        style={({ hovered, pressed }) => [styles.seatHeader,
+          { opacity: pressed ? 0.7 : 1,
+            backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : 'transparent' }]}
       >
         <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.seatText, { fontSize }]}>
           {seat}{seat === mySeat ? ' · TÚ' : ''}{inactive ? ' · no juega' : ''}
@@ -87,19 +95,44 @@ function Seat({
               delayLongPress={500}
               onPress={() => onPressSeat(seat, hand)}
               onLongPress={() => onPressCard({ kind: 'seat', seat, hand }, index)}
-              style={styles.cardTouch}
+              style={({ hovered, pressed }) => [styles.cardTouch,
+                { width: cardSize, height: cardSize * 1.4,
+                  marginLeft: index ? -cardSize * 0.35 : 0,
+                  opacity: pressed ? 0.7 : 1,
+                  backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : 'transparent' }]}
             >
-              <Text style={[styles.cardText, { fontSize }]}>{labelCard(card)}</Text>
+              <PlayingCard
+                rank={card}
+                size={cardSize}
+                highlight={lastTarget?.kind === 'seat'
+                  && lastTarget.seat === seat
+                  && lastTarget.hand === hand
+                  && index === cards.length - 1}
+              />
             </Pressable>
           ))}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Mano ${hand + 1} del puesto ${seat}, total ${total(cards)}`}
-            onPress={() => onPressSeat(seat, hand)}
-            style={styles.handTotalTouch}
-          >
-            <Text style={[styles.cardText, { fontSize }]}>{total(cards)}</Text>
-          </Pressable>
+          {cards.length > 0 && (() => {
+            const bust = total(cards) > 21;
+            const blackjack = total(cards) === 21 && cards.length === 2
+              && hands.length === 1;
+            const title = bust ? 'Se pasó' : blackjack ? 'Blackjack' : String(total(cards));
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Mano ${hand + 1} del puesto ${seat}, ${title}`}
+                onPress={() => onPressSeat(seat, hand)}
+                style={({ hovered, pressed }) => [styles.totalChip,
+                  bust && styles.bustChip, blackjack && styles.blackjackChip,
+                  { opacity: pressed ? 0.7 : 1,
+                    borderWidth: hovered ? 1 : 0,
+                    borderColor: theme.colors.text }]}
+              >
+                <Text style={[styles.totalText, blackjack && styles.blackjackText]}>
+                  {title}
+                </Text>
+              </Pressable>
+            );
+          })()}
         </View>
       ))}
     </>
@@ -154,6 +187,8 @@ export function TableView({
   };
   const { width: areaWidth, height: areaHeight } = areaSize;
   const seatW = clamp(0.165 * areaWidth, 56, 120);
+  const cardSize = clamp(seatW / 3.2, 18, 44);
+  const dealerCardSize = clamp(size.width / 14, 24, 52);
   const seatH = clamp(0.3 * areaHeight, 56, 110);
   const radius = Math.max(0, Math.min(
     (areaWidth - seatW) / 2,
@@ -163,7 +198,13 @@ export function TableView({
   const dealerCards = round?.dealer ?? [];
 
   return (
-    <View onLayout={onLayout} style={styles.table}>
+    <View
+      onLayout={onLayout}
+      style={[styles.table, {
+        borderBottomLeftRadius: Math.min(size.height * 0.4, 220),
+        borderBottomRightRadius: Math.min(size.height * 0.4, 220),
+      }]}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={
@@ -172,7 +213,7 @@ export function TableView({
             : 'Crupier, sin cartas'
         }
         onPress={onPressDealer}
-        style={[
+        style={({ hovered, pressed }) => [
           styles.dealer,
           {
             width: Math.min(size.width * 0.6, 260),
@@ -180,6 +221,8 @@ export function TableView({
             borderColor:
               round?.target?.kind === 'dealer' ? theme.colors.ok : theme.colors.border,
           },
+          { opacity: pressed ? 0.7 : 1,
+            backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : theme.colors.card },
         ]}
       >
         {dealerCards.length ? (
@@ -192,18 +235,36 @@ export function TableView({
                 delayLongPress={500}
                 onPress={onPressDealer}
                 onLongPress={() => onPressCard({ kind: 'dealer' }, index)}
-                style={styles.cardTouch}
+                style={({ hovered, pressed }) => [styles.cardTouch,
+                  { width: dealerCardSize,
+                    height: dealerCardSize * 1.4,
+                    marginLeft: index ? -dealerCardSize * 0.35 : 0,
+                    opacity: pressed ? 0.7 : 1,
+                    backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : 'transparent' }]}
               >
-                <Text style={styles.cardText}>{labelCard(card)}</Text>
+                <PlayingCard
+                  rank={card}
+                  size={dealerCardSize}
+                  highlight={round?.log.at(-1)?.target.kind === 'dealer'
+                    && index === dealerCards.length - 1}
+                />
               </Pressable>
             ))}
+            {dealerCards.length === 1 && (
+              <View style={{ marginLeft: -dealerCardSize * 0.35 }}>
+                <PlayingCard rank={null} size={dealerCardSize} />
+              </View>
+            )}
             <Text style={styles.cardText}>· {total(dealerCards)}</Text>
           </View>
         ) : (
           <Text style={styles.cardText}>Crupier —</Text>
         )}
       </Pressable>
-      <View onLayout={onAreaLayout} style={styles.seatArea}>
+      <View onLayout={onAreaLayout} style={[styles.seatArea, {
+        borderBottomLeftRadius: Math.min(size.height * 0.4, 220),
+        borderBottomRightRadius: Math.min(size.height * 0.4, 220),
+      }]}>
         {(rowLayout ? [7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7]).map((number) => {
           const seat = number as SeatNumber;
           const hands = round?.hands[seat] ?? [];
@@ -230,6 +291,8 @@ export function TableView({
                 width={rowLayout ? '100%' : seatW}
                 height={seatH}
                 fontSize={clamp(seatW / 5, 12, 18)}
+                cardSize={cardSize}
+                round={round}
                 onPressSeat={onPressSeat}
                 onLongPressSeat={onLongPressSeat}
                 onPressCard={onPressCard}
@@ -247,7 +310,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 200,
     overflow: 'hidden',
-    borderRadius: theme.radius.md,
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
+    borderWidth: 6,
+    borderColor: theme.colors.feltEdge,
     backgroundColor: theme.colors.felt,
   },
   dealer: {
@@ -312,17 +378,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardTouch: {
-    minWidth: 28,
-    minHeight: 32,
+    minWidth: 18,
+    minHeight: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  handTotalTouch: {
-    minWidth: 28,
-    minHeight: theme.minTouch,
+  totalChip: {
+    minHeight: 24,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
+  bustChip: { backgroundColor: theme.colors.danger },
+  blackjackChip: { backgroundColor: theme.colors.gold },
+  totalText: { color: theme.colors.text, fontSize: 10, fontWeight: '700' },
+  blackjackText: { color: theme.colors.cardText },
   cardText: {
     color: theme.colors.text,
     fontSize: theme.text.md,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { runningCount, trueCount, decksRemaining } from '../core/hilo';
 import type { TableSession } from '../core/session';
 import { penetration } from '../core/shoe';
@@ -10,9 +11,10 @@ type CountPanelProps = {
   session: TableSession;
   onMySeat?(seat: SeatNumber): void;
   onEndShoe?(): void;
+  large?: boolean;
 };
 
-export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
+export function CountPanel({ session, onMySeat, onEndShoe, large = false }: CountPanelProps) {
   const [seatPickerOpen, setSeatPickerOpen] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,6 +29,7 @@ export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
       if (confirmTimer.current) clearTimeout(confirmTimer.current);
       confirmTimer.current = null;
       setConfirmEnd(false);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       onEndShoe?.();
       return;
     }
@@ -38,14 +41,15 @@ export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
   };
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, large && styles.largePanel]}>
       {session.status === 'lastRound' && (
         <Text style={styles.warning}>ÚLTIMA RONDA: después se baraja</Text>
       )}
       <View style={styles.row}>
         {onEndShoe && (
           <Pressable accessibilityRole="button" accessibilityLabel="Nuevo zapato: reinicia el conteo"
-            onPress={pressEndShoe} style={styles.newShoe}>
+            onPress={pressEndShoe} style={({ hovered, pressed }) => [styles.newShoe,
+              { opacity: pressed ? 0.7 : 1, backgroundColor: hovered ? '#26334D' : 'transparent' }]}>
             <Text numberOfLines={1} adjustsFontSizeToFit style={styles.newShoeText}>
               {confirmEnd ? 'Toca otra vez para confirmar' : 'Nuevo zapato'}
             </Text>
@@ -53,11 +57,11 @@ export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
         )}
         {shoe ? (
           <>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Corrido {runningCount(shoe)}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, styles.realNumber]}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, large && styles.largeNumber]}>Corrido {runningCount(shoe)}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, large && styles.largeNumber, styles.realNumber]}>
               Real {trueCount(shoe).toFixed(1)}
             </Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Mazos {decksRemaining(shoe).toFixed(1)}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, large && styles.largeNumber]}>Mazos {decksRemaining(shoe).toFixed(1)}</Text>
           </>
         ) : (
           <>
@@ -72,7 +76,8 @@ export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
               accessibilityLabel={`Cambiar asiento. Asiento ${session.mySeat ?? 'sin asignar'}`}
               accessibilityState={{ expanded: seatPickerOpen }}
               onPress={() => setSeatPickerOpen((open) => !open)}
-              style={styles.seatToggle}
+              style={({ hovered, pressed }) => [styles.seatToggle,
+                { opacity: pressed ? 0.7 : 1, backgroundColor: hovered ? '#26334D' : 'transparent' }]}
             >
               <Text numberOfLines={1} adjustsFontSizeToFit style={styles.seatToggleText}>
                 Asiento {session.mySeat ?? '—'} ▾
@@ -91,7 +96,8 @@ export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
                 onMySeat(seat);
                 setSeatPickerOpen(false);
               }}
-              style={styles.seatOption}
+              style={({ hovered, pressed }) => [styles.seatOption,
+                { opacity: pressed ? 0.7 : 1, backgroundColor: hovered ? '#26334D' : 'transparent' }]}
             >
               <Text
                 style={[
@@ -131,6 +137,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     backgroundColor: theme.colors.card,
   },
+  largePanel: { padding: theme.space.md },
   warning: {
     color: theme.colors.warning,
     minHeight: theme.minTouch,
@@ -147,6 +154,7 @@ const styles = StyleSheet.create({
     fontSize: theme.text.lg,
     ...theme.numbers,
   },
+  largeNumber: { fontSize: theme.text.xl },
   newShoe: { minHeight: theme.minTouch, justifyContent: 'center', paddingHorizontal: theme.space.xs },
   newShoeText: { color: theme.colors.gold, fontSize: theme.text.xs },
   realNumber: {

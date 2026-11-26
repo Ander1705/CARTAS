@@ -11,6 +11,7 @@ type Props = {
   onSplit(): void;
   onNext(): void;
   onFinish(): void;
+  desktop?: boolean;
 };
 
 export function ActionBar(props: Props) {
@@ -27,7 +28,7 @@ export function ActionBar(props: Props) {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, props.desktop && styles.desktopContainer]}>
       {items.map(([label, text, enabled, action]) => (
         <Pressable
           key={label}
@@ -35,7 +36,11 @@ export function ActionBar(props: Props) {
           accessibilityLabel={label}
           disabled={!enabled}
           onPress={action}
-          style={[styles.button, enabled ? styles.enabled : styles.disabled]}
+          style={({ hovered, pressed }) => [styles.button,
+            enabled ? styles.enabled : styles.disabled,
+            props.desktop && styles.desktopButton,
+            { opacity: pressed ? 0.7 : 1,
+              backgroundColor: hovered ? '#26334D' : undefined }]}
         >
           <Text
             numberOfLines={1}
@@ -54,6 +59,12 @@ export function ActionBar(props: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+  },
+  desktopContainer: {
+    flexWrap: 'wrap',
+  },
+  desktopButton: {
+    flexBasis: '30%',
   },
   button: {
     flex: 1,

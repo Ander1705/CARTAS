@@ -47,3 +47,5 @@ example
 
 # grafo generado (se regenera con /graphify)
 graphify-out/
+.npm-cache/
+dist-check/

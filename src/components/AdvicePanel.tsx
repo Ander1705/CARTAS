@@ -9,6 +9,7 @@ type Props = {
   full: FullAdvice | null;
   computing: boolean;
   error: string | null;
+  large?: boolean;
 };
 
 const labels: Record<PlayAction, string> = {
@@ -19,7 +20,7 @@ function formatEV(value: number | null): string {
   return value === null ? '—' : value.toFixed(3).replace('.', ',');
 }
 
-export function AdvicePanel({ info, quick, full, computing, error }: Props) {
+export function AdvicePanel({ info, quick, full, computing, error, large = false }: Props) {
   const { height } = useWindowDimensions();
   const compact = height < 420;
   if (!info.myTurn) {
@@ -37,12 +38,11 @@ export function AdvicePanel({ info, quick, full, computing, error }: Props) {
     .sort((a, b) => b[1] - a[1]).slice(0, 3) : [];
 
   return (
-    <View style={[styles.panel, compact && styles.compact]} accessibilityLiveRegion="polite">
+    <View style={[styles.panel, compact && styles.compact, large && styles.largePanel]} accessibilityLiveRegion="polite">
       {action && (
-        <View style={[styles.action, action === 'D' || action === 'P' ? styles.felt : null,
-          action === 'R' && styles.warning]}>
+        <View style={[styles.action, { backgroundColor: theme.action[action].bg }]}>
           <Text style={[styles.actionText, compact && styles.compactAction,
-            action === 'R' && styles.warningText]}>{labels[action]}</Text>
+            { color: theme.action[action].fg }]}>{labels[action]}</Text>
         </View>
       )}
       <Text style={styles.line}>
@@ -73,10 +73,8 @@ const styles = StyleSheet.create({
   compact: { padding: 4, gap: 1 },
   waiting: { color: theme.colors.textMuted, paddingHorizontal: theme.space.sm, paddingVertical: 2 },
   action: { alignSelf: 'flex-start', paddingHorizontal: theme.space.md, paddingVertical: 2, borderRadius: theme.radius.sm, backgroundColor: theme.colors.background },
-  felt: { backgroundColor: theme.colors.felt },
-  warning: { backgroundColor: theme.colors.warning },
-  actionText: { color: theme.colors.text, fontSize: theme.text.display, fontWeight: '800' },
+  actionText: { fontSize: theme.text.display, fontWeight: '800' },
   compactAction: { fontSize: 24 },
-  warningText: { color: '#111827' },
+  largePanel: { padding: theme.space.md, gap: theme.space.xs },
   line: { color: theme.colors.text, fontSize: theme.text.xs },
 });

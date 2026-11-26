@@ -12,6 +12,17 @@ export const theme = {
     warning: '#EAB308',
     ok: '#22C55E',
     neutral: '#64748B',
+    cardFace: '#F8FAFC',
+    cardText: '#0F172A',
+    cardBack: '#0B3D20',
+    feltEdge: '#0F5F2E',
+  },
+  action: {
+    H: { bg: '#2563EB', fg: '#FFFFFF' },
+    S: { bg: '#475569', fg: '#FFFFFF' },
+    D: { bg: '#D97706', fg: '#0F172A' },
+    P: { bg: '#7C3AED', fg: '#FFFFFF' },
+    R: { bg: '#DC2626', fg: '#FFFFFF' },
   },
   space: {
     xs: 4,
