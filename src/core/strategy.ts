@@ -9,6 +9,21 @@ export interface StrategyTable { hard: Record<number, StrategyAction[]>; soft: R
 
 export interface Availability { hit: boolean; double: boolean; split: boolean; surrender: boolean; }
 
+export function availability(hand: readonly Rank[], rules: Rules, splitHands: number): Availability {
+  const lockedAces = splitHands >= 2 && hand[0] === 'A' && !rules.hitSplitAces;
+  const hard = hand.reduce((sum, rank) => sum + VALUE[rank], 0);
+  const soft = hand.includes('A') && hard + 10 <= 21;
+  const doubleTotalAllowed = rules.doubleOn === 'any'
+    || (!soft && (rules.doubleOn === '9-11' ? hard >= 9 && hard <= 11 : hard >= 10 && hard <= 11));
+  return {
+    hit: !lockedAces,
+    double: hand.length === 2 && (splitHands === 1 || rules.doubleAfterSplit) && !lockedAces && doubleTotalAllowed,
+    split: hand.length === 2 && hand[0] === hand[1] && splitHands < rules.maxSplitHands
+      && (splitHands === 1 || hand[0] !== 'A' || rules.resplitAces),
+    surrender: rules.surrender === 'late' && splitHands === 1 && hand.length === 2,
+  };
+}
+
 export function lookupAction(hand: readonly Rank[], upcard: Rank, table: StrategyTable, can: Availability): 'H' | 'S' | 'D' | 'P' | 'R' {
   const hard = hand.reduce((sum, rank) => sum + VALUE[rank], 0);
   const soft = hand.includes('A') && hard + 10 <= 21;

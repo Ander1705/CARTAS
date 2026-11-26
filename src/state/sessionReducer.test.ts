@@ -35,4 +35,13 @@ describe('sessionReducer', () => {
     state = sessionReducer(state, { type: 'start', seat: 3 });
     expect(state.error).toBeNull();
   });
+  it('termina el zapato y permite deshacerlo', () => {
+    let state = initialSessionState(createSession(DEFAULT_RULES));
+    state = sessionReducer(state, { type: 'start', seat: 3 });
+    state = sessionReducer(state, { type: 'card', rank: '5' });
+    state = sessionReducer(state, { type: 'endShoe' });
+    expect(state.history.present.status).toBe('waiting');
+    state = sessionReducer(state, { type: 'undo' });
+    expect(state.history.present.status).toBe('counting');
+  });
 });

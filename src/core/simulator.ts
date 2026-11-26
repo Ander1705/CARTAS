@@ -1,6 +1,6 @@
 import { CARDS_PER_DECK, type Rank } from './cards';
 import type { Rules } from './rules';
-import { lookupAction, type StrategyTable } from './strategy';
+import { availability, lookupAction, type StrategyTable } from './strategy';
 
 const value: Readonly<Record<Rank, number>> = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10 };
 
@@ -39,19 +39,13 @@ export function playRound(draw: () => Rank, rules: Rules, table: StrategyTable):
     const hand = hands[index];
     if (hand.fromSplit && hand.cards.length === 1) hand.cards.push(draw());
     while (true) {
-      const { total, soft } = handValue(hand.cards);
+      const { total } = handValue(hand.cards);
       if (total > 21) { hand.bust = true; break; }
       if (total === 21) { hand.stood = true; break; }
-      const lockedAces = hand.fromSplit && hand.cards[0] === 'A' && !rules.hitSplitAces;
-      const hard = hand.cards.reduce((sum, rank) => sum + value[rank], 0);
-      const doubleTotalAllowed = rules.doubleOn === 'any'
-        || (!soft && (rules.doubleOn === '9-11' ? hard >= 9 && hard <= 11 : hard >= 10 && hard <= 11));
-      const can = {
-        hit: !lockedAces,
-        double: hand.cards.length === 2 && (!hand.fromSplit || rules.doubleAfterSplit) && !lockedAces && doubleTotalAllowed,
-        split: hand.cards.length === 2 && hand.cards[0] === hand.cards[1] && handsCount < rules.maxSplitHands && (!hand.fromSplit || hand.cards[0] !== 'A' || rules.resplitAces),
-        surrender: rules.surrender === 'late' && !hand.fromSplit && handsCount === 1 && hand.cards.length === 2,
-      };
+      const splitHands = hand.fromSplit ? handsCount : 1;
+      const can = availability(hand.cards, rules, splitHands);
+      // A first hand may only split while the table-wide hand limit permits it.
+      if (!hand.fromSplit && handsCount >= rules.maxSplitHands) can.split = false;
       const action = lookupAction(hand.cards, up, table, can);
       if (action === 'H') { hand.cards.push(draw()); continue; }
       if (action === 'S') { hand.stood = true; break; }

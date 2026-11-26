@@ -2,16 +2,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useWindowDimensions, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionBar } from '../components/ActionBar';
+import { AdvicePanel } from '../components/AdvicePanel';
 import { CardKeypad } from '../components/CardKeypad';
 import { CountPanel } from '../components/CountPanel';
 import { ErrorLine } from '../components/ErrorLine';
 import { StartShoePanel } from '../components/StartShoePanel';
 import { TableView } from '../components/TableView';
 import { useTableSession } from '../state/useTableSession';
+import { useAdvice } from '../state/useAdvice';
 import { theme } from '../ui/theme';
 
 export default function Index() {
   const { loading, session, error, dispatch, canUndo, canRedo } = useTableSession();
+  const advice = useAdvice(session);
   const { width, height } = useWindowDimensions();
   const landscape = width > height;
   const starting = session.status === 'waiting' || session.status === 'observing';
@@ -36,6 +39,7 @@ export default function Index() {
       <CountPanel
         session={session}
         onMySeat={(seat) => dispatch({ type: 'mySeat', seat })}
+        onEndShoe={() => dispatch({ type: 'endShoe' })}
       />
       <TableView
         round={session.round}
@@ -51,6 +55,7 @@ export default function Index() {
           dispatch({ type: 'removeCard', target, index })
         }
       />
+      <AdvicePanel {...advice} />
       <ErrorLine error={error} />
       <ActionBar
         round={session.round}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { runningCount, trueCount, decksRemaining } from '../core/hilo';
 import type { TableSession } from '../core/session';
@@ -9,11 +9,33 @@ import { theme } from '../ui/theme';
 type CountPanelProps = {
   session: TableSession;
   onMySeat?(seat: SeatNumber): void;
+  onEndShoe?(): void;
 };
 
-export function CountPanel({ session, onMySeat }: CountPanelProps) {
+export function CountPanel({ session, onMySeat, onEndShoe }: CountPanelProps) {
   const [seatPickerOpen, setSeatPickerOpen] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shoe = session.round?.shoe;
+
+  useEffect(() => () => {
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+  }, []);
+
+  const pressEndShoe = () => {
+    if (confirmEnd) {
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      confirmTimer.current = null;
+      setConfirmEnd(false);
+      onEndShoe?.();
+      return;
+    }
+    setConfirmEnd(true);
+    confirmTimer.current = setTimeout(() => {
+      setConfirmEnd(false);
+      confirmTimer.current = null;
+    }, 3000);
+  };
 
   return (
     <View style={styles.panel}>
@@ -21,6 +43,14 @@ export function CountPanel({ session, onMySeat }: CountPanelProps) {
         <Text style={styles.warning}>ÚLTIMA RONDA: después se baraja</Text>
       )}
       <View style={styles.row}>
+        {onEndShoe && (
+          <Pressable accessibilityRole="button" accessibilityLabel="Nuevo zapato: reinicia el conteo"
+            onPress={pressEndShoe} style={styles.newShoe}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.newShoeText}>
+              {confirmEnd ? 'Toca otra vez para confirmar' : 'Nuevo zapato'}
+            </Text>
+          </Pressable>
+        )}
         {shoe ? (
           <>
             <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Corrido {runningCount(shoe)}</Text>
@@ -117,6 +147,8 @@ const styles = StyleSheet.create({
     fontSize: theme.text.lg,
     ...theme.numbers,
   },
+  newShoe: { minHeight: theme.minTouch, justifyContent: 'center', paddingHorizontal: theme.space.xs },
+  newShoeText: { color: theme.colors.gold, fontSize: theme.text.xs },
   realNumber: {
     fontWeight: '700',
   },

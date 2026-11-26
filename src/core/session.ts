@@ -42,6 +42,10 @@ export function observe(s: TableSession): TableSession {
   return { ...s, status: 'observing', round: null, roundsPlayed: 0 };
 }
 
+export function endShoe(s: TableSession): TableSession {
+  return { ...s, status: 'waiting', round: null, roundsPlayed: 0 };
+}
+
 export function setMySeat(s: TableSession, seat: SeatNumber): TableSession {
   if (!SEATS.includes(seat)) throw new Error('Puesto inválido');
   return { ...s, mySeat: seat };
