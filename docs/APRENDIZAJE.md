@@ -41,6 +41,10 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **Inmutabilidad** | No se modifica un estado: cada cambio crea uno nuevo. `dealSeen(zapato, '5')` devuelve otro zapato y el original queda igual. Es la base del deshacer y rehacer |
 | **Valor derivado** | Se calcula a partir de otros datos en lugar de guardarse. El conteo corrido se deriva de las cartas vistas, así que nunca puede desincronizarse |
 | **−0 (cero negativo)** | `Math.trunc(-0.4)` da −0 en JavaScript. Se ve como 0, pero `Object.is(-0, 0)` es falso. Se normaliza a 0 |
+| **Sin reposición** | Cada carta que sale ya no puede volver a salir: las probabilidades cambian después de cada carta. Con un zapato fresco P(10) = 128/416; si sale un 10, la siguiente es P(10) = 127/415 |
+| **Probabilidad condicionada** | Recalcular sabiendo algo nuevo. Con peek y un A visible sin blackjack, se descartan los 10 como tapada: P(A) = 31/287 en lugar de 31/415 |
+| **Memoización** | Guardar el resultado de un cálculo para no repetirlo. El crupier llega al mismo estado (las mismas cartas restantes y el mismo total) por muchos caminos; se calcula una sola vez |
+| **Oráculo** | Una implementación o tabla de referencia independiente contra la que se compara el código. El arquitecto escribe su propio cálculo del crupier y lo compara con el de Codex |
 | **Prueba aleatoria (property test)** | Generar miles de casos al azar y comprobar que una propiedad se cumple siempre, por ejemplo que el conteo es igual a la suma de las cartas vistas |
 
 ---
@@ -61,6 +65,9 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | 2026-11-25 | Mazos restantes **exactos** por defecto (cartas restantes ÷ 52), configurable a medio mazo o mazo entero | "Conteo real de lo que se ha descubierto, nada de corazonadas": la app sabe la cifra exacta. Las opciones aproximadas quedan para el modo práctica | Estimar al medio mazo como un humano |
 | 2026-11-25 | Para los índices, el conteo real se **trunca hacia cero**, configurable a piso o redondeo. En pantalla se muestra con un decimal | Es la convención habitual. Pendiente en la Fase 3: confirmar con qué convención se calcularon los índices publicados | Piso (cambia las decisiones con conteos negativos) |
 | 2026-11-25 | La carta quemada queda dentro de "no vistas" por rango, pero resta de las cartas que quedan en el zapato | Su rango es desconocido: para las probabilidades equivale a una carta no vista. Físicamente ya salió, así que suma a la penetración | Restarla de algún rango (sería inventar) |
+| 2026-11-25 | Reglas por confirmar con valores por defecto marcados (DAS sí, rendición no, peek sí, 4 manos al dividir, sin resplit de ases, sin pedir sobre ases divididos, doblar con cualquier mano) | La app funciona desde el día 1 sin asumir nada en silencio: la interfaz mostrará "por confirmar" | Bloquear la app hasta confirmar |
+| 2026-11-25 | Las probabilidades usan todas las cartas no vistas (incluidas la quemada y la tapada) | Una carta desconocida es tan aleatoria como cualquier otra no vista: así se calcula la probabilidad exacta | Ignorar la quemada (sesgo) |
+| 2026-11-25 | Probabilidades del crupier exactas, por recursión con memoización | Exactitud total con la composición real, en milisegundos | Simular al azar (aproximado y lento) |
 | 2026-11-25 | El zapato es inmutable y el conteo se deriva de él | Una sola fuente de verdad, y deshacer y rehacer salen gratis en la Fase 4 | Guardar el conteo aparte (puede desincronizarse) |
 
 ---
@@ -75,6 +82,7 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | La plantilla traía la web en modo `server` y el nombre `.tmp-app` | Valores por defecto de la plantilla | Revisar y corregir `app.json` | Nunca aceptar una plantilla sin revisarla: trae supuestos que no son los tuyos |
 | Codex dijo "cambié la configuración" sin decir qué | Reporte impreciso | Revisar el diff con `git diff`: no había ningún cambio | **Verificar, no confiar:** el diff dice la verdad, el reporte no siempre |
 | Codex "editó las pruebas" tras un primer fallo (Fase 1) | Repartía más de 4 ases en un zapato de 1 mazo | Revisar línea por línea que ningún valor esperado cambió; solo cambió qué cartas se reparten | Cuando alguien cambia una prueba para que pase, se revisa siempre: puede ser legítimo o puede esconder un error |
+| La primera versión de `dealer.ts` clasificaba mal el blackjack (Fase 2) | Confundía qué estado representa "2 cartas" | Codex corrigió su código, no las pruebas; el arquitecto lo comparó con su oráculo en 400 zapatos | Las pruebas con valores calculados aparte atrapan errores sutiles que el autor del código no ve |
 | Codex dejó una prueba de relleno que no comprobaba nada útil | Exceso de celo por "cubrir" funciones auxiliares | Eliminarla | Una prueba que no puede fallar no prueba nada |
 
 ---
