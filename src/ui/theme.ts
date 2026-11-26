@@ -1,28 +1,31 @@
+// Casino de noche: paño verde botella, baranda de cuero y latón. Pensado para leer de un vistazo con poca luz.
 export const theme = {
   colors: {
-    background: '#0F172A',
-    card: '#192134',
-    muted: '#0F1F2B',
-    text: '#FFFFFF',
-    textMuted: '#94A3B8',
-    border: 'rgba(255,255,255,0.12)',
-    felt: '#15803D',
-    gold: '#D97706',
-    danger: '#DC2626',
-    warning: '#EAB308',
-    ok: '#22C55E',
-    neutral: '#64748B',
-    cardFace: '#F8FAFC',
-    cardText: '#0F172A',
-    cardBack: '#0B3D20',
-    feltEdge: '#0F5F2E',
+    background: '#07140F',
+    card: '#10221B',
+    surfaceHi: '#183128',
+    muted: '#0C1B15',
+    text: '#EEF2EC',
+    textMuted: '#93A89D',
+    border: 'rgba(212,175,90,0.18)',
+    felt: '#0F4A36',
+    feltEdge: '#2A1A12',
+    feltLine: 'rgba(212,175,90,0.35)',
+    gold: '#D4AF5A',
+    danger: '#E5736B',
+    warning: '#E8C45A',
+    ok: '#5FD08A',
+    neutral: '#6B7F76',
+    cardFace: '#F4EFE3',
+    cardText: '#1B1B1B',
+    cardBack: '#5A1E1E',
   },
   action: {
-    H: { bg: '#2563EB', fg: '#FFFFFF' },
-    S: { bg: '#475569', fg: '#FFFFFF' },
-    D: { bg: '#D97706', fg: '#0F172A' },
-    P: { bg: '#7C3AED', fg: '#FFFFFF' },
-    R: { bg: '#DC2626', fg: '#FFFFFF' },
+    H: { bg: '#3B82C4', fg: '#FFFFFF' },
+    S: { bg: '#5B6B66', fg: '#FFFFFF' },
+    D: { bg: '#D4AF5A', fg: '#07140F' },
+    P: { bg: '#8B6FD6', fg: '#FFFFFF' },
+    R: { bg: '#C9554B', fg: '#FFFFFF' },
   },
   space: {
     xs: 4,
@@ -33,7 +36,7 @@ export const theme = {
   },
   radius: {
     sm: 8,
-    md: 12,
+    md: 14,
   },
   minTouch: 48,
   text: {
@@ -48,3 +51,6 @@ export const theme = {
     fontVariant: ['tabular-nums'] as const,
   },
 } as const;
+
+// Mesa vista desde los jugadores: el puesto 1 queda a la derecha (izquierda del crupier).
+export const seatsLeftToRight = [7, 6, 5, 4, 3, 2, 1] as const;

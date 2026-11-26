@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useWindowDimensions, Text, View, ScrollView, StyleSheet } from 'react-native';
+import { useWindowDimensions, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActionBar } from '../components/ActionBar';
 import { AdvicePanel } from '../components/AdvicePanel';
@@ -8,6 +8,7 @@ import { CountPanel } from '../components/CountPanel';
 import { ErrorLine } from '../components/ErrorLine';
 import { StartShoePanel } from '../components/StartShoePanel';
 import { TableView } from '../components/TableView';
+import type { Rank } from '../core/cards';
 import { useTableSession } from '../state/useTableSession';
 import { useAdvice } from '../state/useAdvice';
 import { theme } from '../ui/theme';
@@ -29,46 +30,54 @@ export default function Index() {
     );
   }
 
-  const center = starting ? (
-    <StartShoePanel
-      status={session.status}
-      onStart={(seat) => dispatch({ type: 'start', seat })}
-      onObserve={() => dispatch({ type: 'observe' })}
+  if (starting) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <StatusBar style="light" />
+        <StartShoePanel
+          status={session.status}
+          onStart={(seat) => dispatch({ type: 'start', seat })}
+          onObserve={() => dispatch({ type: 'observe' })}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  const onCard = (rank: Rank) => dispatch({ type: 'card', rank });
+  const count = (
+    <CountPanel
+      large={desktop}
+      session={session}
+      onMySeat={(seat) => dispatch({ type: 'mySeat', seat })}
+      onEndShoe={() => dispatch({ type: 'endShoe' })}
     />
-  ) : (
-    <>
-      <CountPanel
-        session={session}
-        onMySeat={(seat) => dispatch({ type: 'mySeat', seat })}
-        onEndShoe={() => dispatch({ type: 'endShoe' })}
-      />
-      <TableView
-        round={session.round}
-        mySeat={session.mySeat}
-        onPressSeat={(seat, hand) => {
-          if (session.round?.phase === 'initial' || session.round?.phase === 'players') {
-            dispatch({ type: 'target', target: { kind: 'seat', seat, hand } });
-          }
-        }}
-        onLongPressSeat={(seat) => dispatch({ type: 'toggleSeat', seat })}
-        onPressDealer={() => dispatch({ type: 'target', target: { kind: 'dealer' } })}
-        onPressCard={(target, index) =>
-          dispatch({ type: 'removeCard', target, index })
+  );
+  const table = (
+    <TableView
+      round={session.round}
+      mySeat={session.mySeat}
+      onPressSeat={(seat, hand) => {
+        if (session.round?.phase === 'initial' || session.round?.phase === 'players') {
+          dispatch({ type: 'target', target: { kind: 'seat', seat, hand } });
         }
-      />
-      <AdvicePanel {...advice} />
-      <ErrorLine error={error} />
-      <ActionBar
-        round={session.round}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={() => dispatch({ type: 'undo' })}
-        onRedo={() => dispatch({ type: 'redo' })}
-        onSplit={() => dispatch({ type: 'split' })}
-        onNext={() => dispatch({ type: 'next' })}
-        onFinish={() => dispatch({ type: 'finishRound' })}
-      />
-    </>
+      }}
+      onLongPressSeat={(seat) => dispatch({ type: 'toggleSeat', seat })}
+      onPressDealer={() => dispatch({ type: 'target', target: { kind: 'dealer' } })}
+      onPressCard={(target, index) => dispatch({ type: 'removeCard', target, index })}
+    />
+  );
+  const actions = (
+    <ActionBar
+      desktop={desktop}
+      round={session.round}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      onUndo={() => dispatch({ type: 'undo' })}
+      onRedo={() => dispatch({ type: 'redo' })}
+      onSplit={() => dispatch({ type: 'split' })}
+      onNext={() => dispatch({ type: 'next' })}
+      onFinish={() => dispatch({ type: 'finishRound' })}
+    />
   );
 
   if (desktop) {
@@ -76,116 +85,46 @@ export default function Index() {
       <SafeAreaView style={styles.screen}>
         <StatusBar style="light" />
         <View style={styles.desktop}>
-          <View style={styles.desktopLeft}>
-            {!starting && (
-              <>
-                <CountPanel
-                  large
-                  session={session}
-                  onMySeat={(seat) => dispatch({ type: 'mySeat', seat })}
-                  onEndShoe={() => dispatch({ type: 'endShoe' })}
-                />
-                <AdvicePanel {...advice} large />
-              </>
-            )}
+          <View style={styles.desktopSide}>
+            {count}
+            <AdvicePanel {...advice} large />
           </View>
-          <View style={styles.desktopCenter}>
-            {starting ? (
-              <StartShoePanel
-                status={session.status}
-                onStart={(seat) => dispatch({ type: 'start', seat })}
-                onObserve={() => dispatch({ type: 'observe' })}
-              />
-            ) : (
-              <>
-                <TableView
-                  round={session.round}
-                  mySeat={session.mySeat}
-                  onPressSeat={(seat, hand) => {
-                    if (session.round?.phase === 'initial'
-                      || session.round?.phase === 'players') {
-                      dispatch({ type: 'target', target: { kind: 'seat', seat, hand } });
-                    }
-                  }}
-                  onLongPressSeat={(seat) => dispatch({ type: 'toggleSeat', seat })}
-                  onPressDealer={() => dispatch({ type: 'target',
-                    target: { kind: 'dealer' } })}
-                  onPressCard={(target, index) =>
-                    dispatch({ type: 'removeCard', target, index })}
-                />
-                <ErrorLine error={error} />
-              </>
-            )}
+          <View style={styles.column}>
+            {table}
+            <ErrorLine error={error} />
           </View>
-          <View style={styles.desktopRight}>
-            {!starting && (
-              <>
-                <CardKeypad
-                  layout="grid"
-                  largeKeys
-                  onCard={(rank) => dispatch({ type: 'card', rank })}
-                />
-                <ActionBar
-                  desktop
-                  round={session.round}
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  onUndo={() => dispatch({ type: 'undo' })}
-                  onRedo={() => dispatch({ type: 'redo' })}
-                  onSplit={() => dispatch({ type: 'split' })}
-                  onNext={() => dispatch({ type: 'next' })}
-                  onFinish={() => dispatch({ type: 'finishRound' })}
-                />
-              </>
-            )}
+          <View style={styles.desktopSide}>
+            <CardKeypad columns={2} onCard={onCard} style={styles.fill} />
+            {actions}
           </View>
         </View>
       </SafeAreaView>
     );
   }
 
+  const center = (
+    <View style={styles.column}>
+      {count}
+      {table}
+      <AdvicePanel {...advice} />
+      <ErrorLine error={error} />
+      {actions}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="light" />
       {landscape ? (
-        <View style={styles.landscape}>
-          <CardKeypad
-            layout="split"
-            side="left"
-            onCard={(rank) => dispatch({ type: 'card', rank })}
-          />
-          <ScrollView
-            style={styles.center}
-            contentContainerStyle={[
-              styles.mobileCenterContent,
-              height < 420 && styles.shortCenterContent,
-            ]}
-          >
-            {center}
-          </ScrollView>
-          <CardKeypad
-            layout="split"
-            side="right"
-            onCard={(rank) => dispatch({ type: 'card', rank })}
-          />
+        <View style={styles.row}>
+          <CardKeypad columns={1} only="low" onCard={onCard} style={styles.sideKeys} />
+          {center}
+          <CardKeypad columns={1} only="high" onCard={onCard} style={styles.sideKeys} />
         </View>
       ) : (
-        <View style={styles.portrait}>
-          <ScrollView
-            style={styles.center}
-            contentContainerStyle={[
-              styles.mobileCenterContent,
-              height < 700 && styles.shortCenterContent,
-            ]}
-          >
-            {center}
-          </ScrollView>
-          {!starting && (
-            <CardKeypad
-              layout="grid"
-              onCard={(rank) => dispatch({ type: 'card', rank })}
-            />
-          )}
+        <View style={styles.column}>
+          {center}
+          <CardKeypad columns={5} onCard={onCard} style={styles.bottomKeys} />
         </View>
       )}
     </SafeAreaView>
@@ -199,58 +138,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
   },
-  loadingText: {
-    color: theme.colors.text,
-  },
+  loadingText: { color: theme.colors.text },
   screen: {
     flex: 1,
-    padding: theme.space.xs,
+    padding: theme.space.sm,
     backgroundColor: theme.colors.background,
   },
-  landscape: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    minWidth: 0,
-  },
-  desktop: {
-    flex: 1,
-    minHeight: 0,
-    flexDirection: 'row',
-    gap: theme.space.md,
-  },
-  desktopLeft: {
-    width: '28%',
-    minWidth: 0,
-    gap: theme.space.md,
-  },
-  desktopCenter: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 0,
-    gap: theme.space.sm,
-  },
-  desktopRight: {
-    width: '26%',
-    minWidth: 0,
-    gap: theme.space.md,
-  },
-  center: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 0,
-    overflow: 'hidden',
-  },
-  mobileCenterContent: {
-    flexGrow: 1,
-    gap: theme.space.xs,
-  },
-  shortCenterContent: {
-    minHeight: 430,
-  },
-  portrait: {
-    flex: 1,
-    minHeight: 0,
-    gap: theme.space.xs,
-  },
+  row: { flex: 1, minHeight: 0, flexDirection: 'row', gap: theme.space.sm },
+  column: { flex: 1, minWidth: 0, minHeight: 0, gap: theme.space.sm },
+  fill: { flex: 1 },
+  sideKeys: { width: 76 },
+  bottomKeys: { height: 2 * 60 + 6 },
+  desktop: { flex: 1, minHeight: 0, flexDirection: 'row', gap: theme.space.lg },
+  desktopSide: { width: '26%', minWidth: 0, gap: theme.space.md },
 });

@@ -1,7 +1,7 @@
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ShoeStatus } from '../core/session';
-import { SEATS, type SeatNumber } from '../core/table';
-import { theme } from '../ui/theme';
+import type { SeatNumber } from '../core/table';
+import { seatsLeftToRight, theme } from '../ui/theme';
 
 type StartShoePanelProps = {
   status: ShoeStatus;
@@ -10,39 +10,44 @@ type StartShoePanelProps = {
 };
 
 export function StartShoePanel({ status, onStart, onObserve }: StartShoePanelProps) {
-  const { width } = useWindowDimensions();
-  const compact = width < 400;
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Inicio de zapato</Text>
+      <Text style={styles.title}>Zapato nuevo</Text>
       <Text style={styles.subtitle}>
         {status === 'observing'
-          ? 'Observando: espera el próximo zapato'
-          : 'Elige tu asiento'}
+          ? 'Estás observando. Elige tu asiento cuando empiece el próximo zapato.'
+          : '¿Dónde estás sentado? Se cuenta como en el casino: el 1 queda a la izquierda del crupier, o sea a tu derecha.'}
       </Text>
-      <View style={[styles.seats, compact && styles.compactSeats]}>
-        {SEATS.map((seat) => (
-          <Pressable
-            key={seat}
-            accessibilityRole="button"
-            accessibilityLabel={`Iniciar en el puesto ${seat}`}
-            onPress={() => onStart(seat)}
-            style={[styles.seatButton, compact && styles.compactSeatButton]}
-          >
-            <Text style={styles.seatLabel}>{seat}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.table}>
+        <Text style={styles.dealer}>Crupier</Text>
+        <View style={styles.seats}>
+          {seatsLeftToRight.map((seat, column) => (
+            <View
+              key={seat}
+              style={[styles.slot, { paddingTop: 36 * Math.sin((Math.PI * column) / 6) }]}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Empezar en el puesto ${seat}`}
+                onPress={() => onStart(seat)}
+                style={({ hovered, pressed }) => [styles.spot, (hovered || pressed) && styles.spotActive]}
+              >
+                <Text style={styles.spotText}>{seat}</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Observar zapato"
+        accessibilityLabel="Observar este zapato sin jugar"
         onPress={onObserve}
-        style={styles.observeButton}
+        style={({ hovered, pressed }) => [styles.observe, (hovered || pressed) && styles.spotActive]}
       >
-        <Text style={styles.muted}>Observar (abrí a mitad de zapato)</Text>
+        <Text style={styles.observeText}>Llegué a mitad de zapato: solo observar</Text>
       </Pressable>
       <Text style={styles.disclaimer}>
-        Herramienta de práctica: no garantiza ganancias. Juega con responsabilidad.
+        Herramienta de práctica. No garantiza ganancias; juega con responsabilidad.
       </Text>
     </View>
   );
@@ -51,55 +56,50 @@ export function StartShoePanel({ status, onStart, onObserve }: StartShoePanelPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
     justifyContent: 'center',
     padding: theme.space.lg,
+    gap: theme.space.lg,
   },
-  title: {
-    color: theme.colors.text,
-    fontSize: theme.text.xl,
+  title: { color: theme.colors.text, fontSize: theme.text.xl, fontWeight: '800' },
+  subtitle: { color: theme.colors.textMuted, fontSize: theme.text.md, lineHeight: 22 },
+  table: {
+    paddingTop: theme.space.md,
+    paddingBottom: theme.space.xl,
+    borderTopLeftRadius: theme.radius.md,
+    borderTopRightRadius: theme.radius.md,
+    borderBottomLeftRadius: 120,
+    borderBottomRightRadius: 120,
+    borderWidth: 6,
+    borderColor: theme.colors.feltEdge,
+    backgroundColor: theme.colors.felt,
+    alignItems: 'center',
   },
-  subtitle: {
-    margin: theme.space.md,
-    color: theme.colors.textMuted,
-    fontSize: theme.text.md,
-  },
-  seats: {
-    flexDirection: 'row',
-    width: '100%',
-  },
-  seatButton: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: theme.minTouch,
-    margin: theme.space.xs,
+  dealer: { color: theme.colors.textMuted, fontSize: theme.text.sm, marginBottom: theme.space.sm },
+  seats: { flexDirection: 'row', width: '100%', paddingHorizontal: theme.space.xs },
+  slot: { flex: 1, minWidth: 0, alignItems: 'center' },
+  spot: {
+    width: 46,
+    maxWidth: '96%',
+    aspectRatio: 1,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: theme.colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.card,
   },
-  compactSeats: {
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  compactSeatButton: {
-    flex: 0,
-    flexBasis: '21%',
-  },
-  seatLabel: {
-    color: theme.colors.text,
-  },
-  observeButton: {
+  spotActive: { backgroundColor: 'rgba(212,175,90,0.2)' },
+  spotText: { color: theme.colors.text, fontSize: theme.text.lg, fontWeight: '800' },
+  observe: {
     minHeight: theme.minTouch,
     justifyContent: 'center',
-    paddingHorizontal: theme.space.lg,
+    alignItems: 'center',
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  muted: {
-    color: theme.colors.textMuted,
-  },
-  disclaimer: {
-    marginTop: theme.space.lg,
-    color: theme.colors.textMuted,
-    textAlign: 'center',
-  },
+  observeText: { color: theme.colors.text, fontSize: theme.text.sm },
+  disclaimer: { color: theme.colors.textMuted, fontSize: theme.text.xs, textAlign: 'center' },
 });

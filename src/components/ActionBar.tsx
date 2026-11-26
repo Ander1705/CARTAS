@@ -40,7 +40,7 @@ export function ActionBar(props: Props) {
             enabled ? styles.enabled : styles.disabled,
             props.desktop && styles.desktopButton,
             { opacity: pressed ? 0.7 : 1,
-              backgroundColor: hovered ? '#26334D' : undefined }]}
+              backgroundColor: hovered ? theme.colors.surfaceHi : undefined }]}
         >
           <Text
             numberOfLines={1}
@@ -77,6 +77,8 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
   },
   enabled: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     backgroundColor: theme.colors.card,
   },
   disabled: {

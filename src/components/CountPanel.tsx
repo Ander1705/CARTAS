@@ -4,8 +4,8 @@ import * as Haptics from 'expo-haptics';
 import { runningCount, trueCount, decksRemaining } from '../core/hilo';
 import type { TableSession } from '../core/session';
 import { penetration } from '../core/shoe';
-import { SEATS, type SeatNumber } from '../core/table';
-import { theme } from '../ui/theme';
+import type { SeatNumber } from '../core/table';
+import { seatsLeftToRight, theme } from '../ui/theme';
 
 type CountPanelProps = {
   session: TableSession;
@@ -14,11 +14,20 @@ type CountPanelProps = {
   large?: boolean;
 };
 
+function signed(value: number, digits = 0) {
+  const text = value.toFixed(digits);
+  return value > 0 ? `+${text}` : text;
+}
+
 export function CountPanel({ session, onMySeat, onEndShoe, large = false }: CountPanelProps) {
   const [seatPickerOpen, setSeatPickerOpen] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shoe = session.round?.shoe;
+  const tc = shoe ? trueCount(shoe) : null;
+  const tcColor = tc === null || Math.abs(tc) < 1
+    ? theme.colors.text
+    : tc > 0 ? theme.colors.ok : theme.colors.danger;
 
   useEffect(() => () => {
     if (confirmTimer.current) clearTimeout(confirmTimer.current);
@@ -43,51 +52,55 @@ export function CountPanel({ session, onMySeat, onEndShoe, large = false }: Coun
   return (
     <View style={[styles.panel, large && styles.largePanel]}>
       {session.status === 'lastRound' && (
-        <Text style={styles.warning}>ÚLTIMA RONDA: después se baraja</Text>
+        <Text style={styles.warning}>Última ronda: después se baraja</Text>
       )}
-      <View style={styles.row}>
-        {onEndShoe && (
-          <Pressable accessibilityRole="button" accessibilityLabel="Nuevo zapato: reinicia el conteo"
-            onPress={pressEndShoe} style={({ hovered, pressed }) => [styles.newShoe,
-              { opacity: pressed ? 0.7 : 1, backgroundColor: hovered ? '#26334D' : 'transparent' }]}>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.newShoeText}>
-              {confirmEnd ? 'Toca otra vez para confirmar' : 'Nuevo zapato'}
-            </Text>
-          </Pressable>
-        )}
-        {shoe ? (
-          <>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, large && styles.largeNumber]}>Corrido {runningCount(shoe)}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, large && styles.largeNumber, styles.realNumber]}>
-              Real {trueCount(shoe).toFixed(1)}
-            </Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.number, large && styles.largeNumber]}>Mazos {decksRemaining(shoe).toFixed(1)}</Text>
-          </>
-        ) : (
-          <>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Corrido —</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Real —</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.number}>Mazos —</Text>
-          </>
-        )}
-        {onMySeat && (
-          <Pressable
+      <View style={[styles.row, large && styles.largeRow]}>
+        <View accessible accessibilityLabel={`Conteo real ${tc === null ? 'sin datos' : signed(tc, 1)}`}>
+          <Text style={[styles.tc, large && styles.largeTc, { color: tcColor }]}>
+            {tc === null ? '—' : signed(tc, 1)}
+          </Text>
+          <Text style={styles.caption}>conteo real</Text>
+        </View>
+        <View style={styles.stats}>
+          <Text numberOfLines={1} style={styles.stat}>
+            Corrido <Text style={styles.statValue}>{shoe ? signed(runningCount(shoe)) : '—'}</Text>
+          </Text>
+          <Text numberOfLines={1} style={styles.stat}>
+            Mazos <Text style={styles.statValue}>{shoe ? decksRemaining(shoe).toFixed(1) : '—'}</Text>
+          </Text>
+        </View>
+        <View style={styles.buttons}>
+          {onMySeat && (
+            <Pressable
               accessibilityRole="button"
               accessibilityLabel={`Cambiar asiento. Asiento ${session.mySeat ?? 'sin asignar'}`}
               accessibilityState={{ expanded: seatPickerOpen }}
               onPress={() => setSeatPickerOpen((open) => !open)}
-              style={({ hovered, pressed }) => [styles.seatToggle,
-                { opacity: pressed ? 0.7 : 1, backgroundColor: hovered ? '#26334D' : 'transparent' }]}
+              style={({ hovered, pressed }) => [styles.button, (hovered || pressed) && styles.active]}
             >
-              <Text numberOfLines={1} adjustsFontSizeToFit style={styles.seatToggleText}>
+              <Text numberOfLines={1} style={styles.buttonText}>
                 Asiento {session.mySeat ?? '—'} ▾
               </Text>
             </Pressable>
-        )}
+          )}
+          {onEndShoe && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Nuevo zapato: reinicia el conteo"
+              onPress={pressEndShoe}
+              style={({ hovered, pressed }) => [styles.button,
+                confirmEnd && styles.confirm, (hovered || pressed) && styles.active]}
+            >
+              <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.buttonText, confirmEnd && styles.confirmText]}>
+                {confirmEnd ? '¿Seguro? Toca otra vez' : 'Nuevo zapato'}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
       {seatPickerOpen && onMySeat && (
         <View style={styles.seatOptions}>
-          {SEATS.map((seat) => (
+          {seatsLeftToRight.map((seat) => (
             <Pressable
               key={seat}
               accessibilityRole="button"
@@ -97,14 +110,10 @@ export function CountPanel({ session, onMySeat, onEndShoe, large = false }: Coun
                 setSeatPickerOpen(false);
               }}
               style={({ hovered, pressed }) => [styles.seatOption,
-                { opacity: pressed ? 0.7 : 1, backgroundColor: hovered ? '#26334D' : 'transparent' }]}
+                seat === session.mySeat && styles.seatOptionMine,
+                (hovered || pressed) && styles.active]}
             >
-              <Text
-                style={[
-                  styles.seatOptionText,
-                  seat === session.mySeat && styles.selectedSeat,
-                ]}
-              >
+              <Text style={[styles.seatOptionText, seat === session.mySeat && styles.mine]}>
                 {seat}
               </Text>
             </Pressable>
@@ -112,19 +121,14 @@ export function CountPanel({ session, onMySeat, onEndShoe, large = false }: Coun
         </View>
       )}
       {shoe && (
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${Math.min(100, penetration(shoe) * 100)}%` },
-            ]}
-          />
-          <View
-            style={[
-              styles.cutMarker,
-              { left: `${session.rules.cutPenetration * 100}%` },
-            ]}
-          />
+        <View
+          accessible
+          accessibilityLabel={`Penetración ${Math.round(penetration(shoe) * 100)} por ciento`}
+          style={styles.progressTrack}
+        >
+          <View style={[styles.progressFill,
+            { width: `${Math.min(100, penetration(shoe) * 100)}%` }]} />
+          <View style={[styles.cutMarker, { left: `${session.rules.cutPenetration * 100}%` }]} />
         </View>
       )}
     </View>
@@ -133,79 +137,67 @@ export function CountPanel({ session, onMySeat, onEndShoe, large = false }: Coun
 
 const styles = StyleSheet.create({
   panel: {
-    padding: theme.space.sm,
-    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.space.md,
+    paddingVertical: theme.space.sm,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
     backgroundColor: theme.colors.card,
+    gap: theme.space.xs,
   },
-  largePanel: { padding: theme.space.md },
-  warning: {
-    color: theme.colors.warning,
-    minHeight: theme.minTouch,
-    textAlignVertical: 'center',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  number: {
-    flex: 1,
-    minWidth: 0,
+  largePanel: { padding: theme.space.lg },
+  warning: { color: theme.colors.warning, fontWeight: '700' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: theme.space.md },
+  largeRow: { flexWrap: 'wrap' },
+  tc: {
     color: theme.colors.text,
-    fontSize: theme.text.lg,
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: '800',
     ...theme.numbers,
   },
-  largeNumber: { fontSize: theme.text.xl },
-  newShoe: { minHeight: theme.minTouch, justifyContent: 'center', paddingHorizontal: theme.space.xs },
-  newShoeText: { color: theme.colors.gold, fontSize: theme.text.xs },
-  realNumber: {
-    fontWeight: '700',
-  },
-  muted: {
-    color: theme.colors.textMuted,
-  },
-  seatToggle: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: theme.minTouch,
-    alignItems: 'flex-end',
+  largeTc: { fontSize: 56, lineHeight: 60 },
+  caption: { color: theme.colors.textMuted, fontSize: theme.text.xs },
+  stats: { flex: 1, minWidth: 0, gap: 2 },
+  stat: { color: theme.colors.textMuted, fontSize: theme.text.sm },
+  statValue: { color: theme.colors.text, fontWeight: '700', ...theme.numbers },
+  buttons: { gap: theme.space.xs, alignItems: 'stretch' },
+  button: {
+    minHeight: 40,
+    paddingHorizontal: theme.space.sm,
     justifyContent: 'center',
-    paddingHorizontal: theme.space.xs,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  seatToggleText: {
-    color: theme.colors.gold,
-  },
-  seatOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+  active: { backgroundColor: theme.colors.surfaceHi },
+  confirm: { borderColor: theme.colors.danger },
+  buttonText: { color: theme.colors.gold, fontSize: theme.text.sm, fontWeight: '600' },
+  confirmText: { color: theme.colors.danger },
+  seatOptions: { flexDirection: 'row', gap: 4 },
   seatOption: {
     flex: 1,
     minHeight: theme.minTouch,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  seatOptionText: {
-    color: theme.colors.textMuted,
-  },
-  selectedSeat: {
-    color: theme.colors.gold,
-  },
+  seatOptionMine: { borderColor: theme.colors.gold },
+  seatOptionText: { color: theme.colors.text, fontWeight: '700' },
+  mine: { color: theme.colors.gold },
   progressTrack: {
-    height: 8,
-    marginTop: theme.space.xs,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: theme.colors.muted,
   },
-  progressFill: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.felt,
-  },
+  progressFill: { height: 6, borderRadius: 3, backgroundColor: theme.colors.gold },
   cutMarker: {
     position: 'absolute',
-    top: -2,
+    top: -3,
     width: 2,
     height: 12,
-    backgroundColor: theme.colors.warning,
+    backgroundColor: theme.colors.danger,
   },
 });

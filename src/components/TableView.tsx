@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import type { Rank } from '../core/cards';
 import type { RoundState, SeatNumber, Target } from '../core/table';
-import { theme } from '../ui/theme';
+import { seatsLeftToRight, theme } from '../ui/theme';
 import { PlayingCard } from './PlayingCard';
 
 type TableViewProps = {
@@ -20,26 +20,6 @@ type TableViewProps = {
   onPressDealer(): void;
   onPressCard(target: Target, index: number): void;
 };
-
-type SeatProps = {
-  seat: SeatNumber;
-  hands: Rank[][];
-  mySeat: SeatNumber | null;
-  inactive: boolean;
-  selected: boolean;
-  width: number | `${number}%`;
-  height: number;
-  fontSize: number;
-  cardSize: number;
-  round: RoundState | null;
-  onPressSeat(seat: SeatNumber, hand: number): void;
-  onLongPressSeat(seat: SeatNumber): void;
-  onPressCard(target: Target, index: number): void;
-};
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
 
 function total(cards: Rank[]) {
   const base = cards.reduce(
@@ -53,112 +33,15 @@ function labelCard(card: Rank) {
   return card === 'T' ? '10' : card;
 }
 
-function Seat({
-  seat,
-  hands,
-  mySeat,
-  inactive,
-  selected,
-  width,
-  height,
-  fontSize,
-  cardSize,
-  round,
-  onPressSeat,
-  onLongPressSeat,
-  onPressCard,
-}: SeatProps) {
-  const lastTarget = round?.log[round.log.length - 1]?.target;
-  const content = (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Puesto ${seat}${seat === mySeat ? ', tu asiento' : ''}${inactive ? ', no juega' : ''}`}
-        delayLongPress={500}
-        onPress={() => onPressSeat(seat, 0)}
-        onLongPress={() => onLongPressSeat(seat)}
-        style={({ hovered, pressed }) => [styles.seatHeader,
-          { opacity: pressed ? 0.7 : 1,
-            backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : 'transparent' }]}
-      >
-        <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.seatText, { fontSize }]}>
-          {seat}{seat === mySeat ? ' · TÚ' : ''}{inactive ? ' · no juega' : ''}
-        </Text>
-      </Pressable>
-      {hands.map((cards, hand) => (
-        <View key={hand} style={styles.hand}>
-          {cards.map((card, index) => (
-            <Pressable
-              key={`${index}-${card}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Carta ${labelCard(card)} del puesto ${seat}. Mantén presionado para quitarla`}
-              delayLongPress={500}
-              onPress={() => onPressSeat(seat, hand)}
-              onLongPress={() => onPressCard({ kind: 'seat', seat, hand }, index)}
-              style={({ hovered, pressed }) => [styles.cardTouch,
-                { width: cardSize, height: cardSize * 1.4,
-                  marginLeft: index ? -cardSize * 0.35 : 0,
-                  opacity: pressed ? 0.7 : 1,
-                  backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : 'transparent' }]}
-            >
-              <PlayingCard
-                rank={card}
-                size={cardSize}
-                highlight={lastTarget?.kind === 'seat'
-                  && lastTarget.seat === seat
-                  && lastTarget.hand === hand
-                  && index === cards.length - 1}
-              />
-            </Pressable>
-          ))}
-          {cards.length > 0 && (() => {
-            const bust = total(cards) > 21;
-            const blackjack = total(cards) === 21 && cards.length === 2
-              && hands.length === 1;
-            const title = bust ? 'Se pasó' : blackjack ? 'Blackjack' : String(total(cards));
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Mano ${hand + 1} del puesto ${seat}, ${title}`}
-                onPress={() => onPressSeat(seat, hand)}
-                style={({ hovered, pressed }) => [styles.totalChip,
-                  bust && styles.bustChip, blackjack && styles.blackjackChip,
-                  { opacity: pressed ? 0.7 : 1,
-                    borderWidth: hovered ? 1 : 0,
-                    borderColor: theme.colors.text }]}
-              >
-                <Text style={[styles.totalText, blackjack && styles.blackjackText]}>
-                  {title}
-                </Text>
-              </Pressable>
-            );
-          })()}
-        </View>
-      ))}
-    </>
-  );
-
+function TotalChip({ cards, single }: { cards: Rank[]; single: boolean }) {
+  const value = total(cards);
+  const bust = value > 21;
+  const blackjack = value === 21 && cards.length === 2 && single;
   return (
-    <View
-      accessibilityLabel={`Puesto ${seat}, ${hands.reduce((sum, hand) => sum + hand.length, 0)} cartas`}
-      style={[
-        styles.seat,
-        {
-          width,
-          height,
-          borderWidth: selected ? 3 : seat === mySeat ? 2 : 1,
-          borderColor: selected
-            ? theme.colors.ok
-            : seat === mySeat
-              ? theme.colors.gold
-              : theme.colors.border,
-          opacity: inactive ? 0.4 : 1,
-        },
-      ]}
-    >
-      <ScrollView style={styles.handsScroll} nestedScrollEnabled>
-        {content}
-      </ScrollView>
+    <View style={[styles.chip, bust && styles.bustChip, blackjack && styles.bjChip]}>
+      <Text numberOfLines={1} style={[styles.chipText, blackjack && styles.bjText]}>
+        {bust ? 'Pasó' : blackjack ? 'BJ' : value}
+      </Text>
     </View>
   );
 }
@@ -171,61 +54,33 @@ export function TableView({
   onPressDealer,
   onPressCard,
 }: TableViewProps) {
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  const [areaSize, setAreaSize] = useState({ width: 0, height: 0 });
+  const [area, setArea] = useState({ width: 0, height: 0 });
   const onAreaLayout = (event: LayoutChangeEvent) => {
-    setAreaSize({
-      width: event.nativeEvent.layout.width,
-      height: event.nativeEvent.layout.height,
-    });
+    const { width, height } = event.nativeEvent.layout;
+    setArea({ width, height });
   };
-  const onLayout = (event: LayoutChangeEvent) => {
-    setSize({
-      width: event.nativeEvent.layout.width,
-      height: event.nativeEvent.layout.height,
-    });
-  };
-  const { width: areaWidth, height: areaHeight } = areaSize;
-  const seatW = clamp(0.165 * areaWidth, 56, 120);
-  const cardSize = clamp(seatW / 3.2, 18, 44);
-  const dealerCardSize = clamp(size.width / 14, 24, 52);
-  const seatH = clamp(0.3 * areaHeight, 56, 110);
-  const radius = Math.max(0, Math.min(
-    (areaWidth - seatW) / 2,
-    (areaHeight - seatH) / 0.6,
-  ));
-  const rowLayout = 0.416 * radius < seatW;
+  // Cada puesto es una columna de igual ancho: el arco solo baja los del centro, nunca los encima.
+  const colW = area.width / 7;
+  const arcDepth = Math.min(area.height * 0.18, 40);
+  const cardW = Math.max(18, Math.min(colW - 8, 54));
+  const dealerCardW = Math.max(26, Math.min(area.width / 9, 58));
   const dealerCards = round?.dealer ?? [];
+  const lastTarget = round?.log.at(-1)?.target;
+  const dealerSelected = round?.target?.kind === 'dealer';
 
   return (
-    <View
-      onLayout={onLayout}
-      style={[styles.table, {
-        borderBottomLeftRadius: Math.min(size.height * 0.4, 220),
-        borderBottomRightRadius: Math.min(size.height * 0.4, 220),
-      }]}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          dealerCards.length
+    <View style={styles.rail}>
+      <View style={styles.felt}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={dealerCards.length
             ? `Crupier, ${dealerCards.length} cartas, total ${total(dealerCards)}`
-            : 'Crupier, sin cartas'
-        }
-        onPress={onPressDealer}
-        style={({ hovered, pressed }) => [
-          styles.dealer,
-          {
-            width: Math.min(size.width * 0.6, 260),
-            borderWidth: round?.target?.kind === 'dealer' ? 3 : 1,
-            borderColor:
-              round?.target?.kind === 'dealer' ? theme.colors.ok : theme.colors.border,
-          },
-          { opacity: pressed ? 0.7 : 1,
-            backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : theme.colors.card },
-        ]}
-      >
-        {dealerCards.length ? (
+            : 'Crupier, sin cartas'}
+          onPress={onPressDealer}
+          style={({ hovered, pressed }) => [styles.dealer,
+            dealerSelected && styles.dealerSelected,
+            (hovered || pressed) && styles.hover]}
+        >
           <View style={styles.dealerCards}>
             {dealerCards.map((card, index) => (
               <Pressable
@@ -235,169 +90,206 @@ export function TableView({
                 delayLongPress={500}
                 onPress={onPressDealer}
                 onLongPress={() => onPressCard({ kind: 'dealer' }, index)}
-                style={({ hovered, pressed }) => [styles.cardTouch,
-                  { width: dealerCardSize,
-                    height: dealerCardSize * 1.4,
-                    marginLeft: index ? -dealerCardSize * 0.35 : 0,
-                    opacity: pressed ? 0.7 : 1,
-                    backgroundColor: hovered ? 'rgba(255,255,255,0.12)' : 'transparent' }]}
+                style={{ marginLeft: index ? -dealerCardW * 0.4 : 0 }}
               >
                 <PlayingCard
                   rank={card}
-                  size={dealerCardSize}
-                  highlight={round?.log.at(-1)?.target.kind === 'dealer'
-                    && index === dealerCards.length - 1}
+                  size={dealerCardW}
+                  highlight={lastTarget?.kind === 'dealer' && index === dealerCards.length - 1}
                 />
               </Pressable>
             ))}
             {dealerCards.length === 1 && (
-              <View style={{ marginLeft: -dealerCardSize * 0.35 }}>
-                <PlayingCard rank={null} size={dealerCardSize} />
+              <View style={{ marginLeft: -dealerCardW * 0.4 }}>
+                <PlayingCard rank={null} size={dealerCardW} />
               </View>
             )}
-            <Text style={styles.cardText}>· {total(dealerCards)}</Text>
+            {dealerCards.length === 0 && (
+              <View style={[styles.cardSlot, { width: dealerCardW, height: dealerCardW * 1.4 }]} />
+            )}
           </View>
-        ) : (
-          <Text style={styles.cardText}>Crupier —</Text>
-        )}
-      </Pressable>
-      <View onLayout={onAreaLayout} style={[styles.seatArea, {
-        borderBottomLeftRadius: Math.min(size.height * 0.4, 220),
-        borderBottomRightRadius: Math.min(size.height * 0.4, 220),
-      }]}>
-        {(rowLayout ? [7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7]).map((number) => {
-          const seat = number as SeatNumber;
-          const hands = round?.hands[seat] ?? [];
-          const index = seat - 1;
-          const angle = Math.PI * (0.1 + (0.8 * index) / 6);
-          const x = areaWidth / 2 + radius * Math.cos(angle);
-          const y = radius * 0.6 * Math.sin(angle);
-          return (
-            <View
-              key={seat}
-              style={rowLayout
-                ? styles.rowSeat
-                : [styles.seatPosition, {
-                    left: x - seatW / 2,
-                    top: y + seatH / 2 - seatH / 2,
-                  }]}
-            >
-              <Seat
-                seat={seat}
-                hands={hands}
-                mySeat={mySeat}
-                inactive={round ? !round.active[seat] : false}
-                selected={round?.target?.kind === 'seat' && round.target.seat === seat}
-                width={rowLayout ? '100%' : seatW}
-                height={seatH}
-                fontSize={clamp(seatW / 5, 12, 18)}
-                cardSize={cardSize}
-                round={round}
-                onPressSeat={onPressSeat}
-                onLongPressSeat={onLongPressSeat}
-                onPressCard={onPressCard}
-              />
-            </View>
-          );
-        })}
+          <Text style={styles.dealerLabel}>
+            {dealerCards.length ? `Crupier ${total(dealerCards)}` : 'Crupier'}
+          </Text>
+        </Pressable>
+
+        <View onLayout={onAreaLayout} style={styles.seats}>
+          {seatsLeftToRight.map((seat, column) => {
+            const hands = round?.hands[seat] ?? [];
+            const inactive = round ? !round.active[seat] : false;
+            const selected = round?.target?.kind === 'seat' && round.target.seat === seat;
+            const mine = seat === mySeat;
+            const cardCount = hands.reduce((sum, hand) => sum + hand.length, 0);
+            return (
+              <View
+                key={seat}
+                style={[styles.seat, {
+                  paddingBottom: arcDepth * (1 - Math.sin((Math.PI * column) / 6)),
+                  opacity: inactive ? 0.35 : 1,
+                }]}
+              >
+                <ScrollView
+                  style={styles.handsScroll}
+                  contentContainerStyle={styles.handsContent}
+                  nestedScrollEnabled
+                >
+                  {hands.map((cards, hand) => (
+                    <Pressable
+                      key={hand}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Mano ${hand + 1} del puesto ${seat}`}
+                      onPress={() => onPressSeat(seat, hand)}
+                      style={[styles.hand,
+                        selected && round?.target?.kind === 'seat'
+                          && round.target.hand === hand && styles.handSelected]}
+                    >
+                      {cards.map((card, index) => (
+                        <Pressable
+                          key={`${index}-${card}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Carta ${labelCard(card)} del puesto ${seat}. Mantén presionado para quitarla`}
+                          delayLongPress={500}
+                          onPress={() => onPressSeat(seat, hand)}
+                          onLongPress={() => onPressCard({ kind: 'seat', seat, hand }, index)}
+                          style={{ marginTop: index ? -cardW * 1.4 * 0.62 : 0 }}
+                        >
+                          <PlayingCard
+                            rank={card}
+                            size={cardW}
+                            highlight={lastTarget?.kind === 'seat'
+                              && lastTarget.seat === seat
+                              && lastTarget.hand === hand
+                              && index === cards.length - 1}
+                          />
+                        </Pressable>
+                      ))}
+                      {cards.length > 0 && <TotalChip cards={cards} single={hands.length === 1} />}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Puesto ${seat}${mine ? ', tu asiento' : ''}${inactive ? ', no juega' : ''}, ${cardCount} cartas. Mantén presionado para activarlo o desactivarlo`}
+                  accessibilityState={{ selected }}
+                  delayLongPress={500}
+                  onPress={() => onPressSeat(seat, 0)}
+                  onLongPress={() => onLongPressSeat(seat)}
+                  style={({ hovered, pressed }) => [styles.spot,
+                    mine && styles.spotMine,
+                    selected && styles.spotSelected,
+                    (hovered || pressed) && styles.hover]}
+                >
+                  <Text style={[styles.spotText, mine && styles.spotTextMine]}>{seat}</Text>
+                </Pressable>
+                <Text numberOfLines={1} style={styles.spotCaption}>
+                  {inactive ? 'no juega' : mine ? 'tú' : ' '}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  table: {
+  rail: {
     flex: 1,
-    minHeight: 200,
-    overflow: 'hidden',
+    minHeight: 180,
+    padding: 6,
     borderTopLeftRadius: theme.radius.md,
     borderTopRightRadius: theme.radius.md,
-    borderWidth: 6,
-    borderColor: theme.colors.feltEdge,
+    borderBottomLeftRadius: 80,
+    borderBottomRightRadius: 80,
+    backgroundColor: theme.colors.feltEdge,
+  },
+  felt: {
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+    paddingHorizontal: 2,
+    paddingTop: theme.space.xs,
+    borderTopLeftRadius: theme.radius.sm,
+    borderTopRightRadius: theme.radius.sm,
+    borderBottomLeftRadius: 74,
+    borderBottomRightRadius: 74,
+    borderWidth: 1,
+    borderColor: theme.colors.feltLine,
     backgroundColor: theme.colors.felt,
   },
   dealer: {
     alignSelf: 'center',
+    alignItems: 'center',
     minHeight: theme.minTouch,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: theme.space.md,
+    paddingVertical: 2,
     borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.card,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  dealerCards: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
+  dealerSelected: { borderColor: theme.colors.gold },
+  hover: { backgroundColor: 'rgba(255,255,255,0.08)' },
+  dealerCards: { flexDirection: 'row', alignItems: 'center' },
+  cardSlot: {
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.feltLine,
   },
-  seatArea: {
+  dealerLabel: {
+    marginTop: 2,
+    color: theme.colors.text,
+    fontSize: theme.text.sm,
+    fontWeight: '700',
+    ...theme.numbers,
+  },
+  seats: {
     flex: 1,
     minHeight: 0,
-    position: 'relative',
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    columnGap: 4,
-  },
-  seatPosition: {
-    position: 'absolute',
-  },
-  rowSeat: {
-    flex: 1,
-    minWidth: 0,
-    height: '100%',
-    alignItems: 'stretch',
   },
   seat: {
-    minHeight: theme.minTouch,
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: 2,
-    borderRadius: theme.radius.sm,
-    backgroundColor: theme.colors.card,
   },
-  handsScroll: {
-    width: '100%',
-    height: '100%',
-  },
-  seatHeader: {
-    width: '100%',
-    minHeight: theme.minTouch,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  seatText: {
-    color: theme.colors.text,
-    fontSize: theme.text.xs,
-  },
+  handsScroll: { flex: 1, width: '100%' },
+  handsContent: { flexGrow: 1, justifyContent: 'flex-end', alignItems: 'center', gap: 4 },
   hand: {
-    minHeight: theme.minTouch,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: 1,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  cardTouch: {
-    minWidth: 18,
-    minHeight: 28,
+  handSelected: { borderColor: theme.colors.gold },
+  chip: {
+    marginTop: 2,
+    minWidth: 26,
+    paddingHorizontal: 4,
+    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  totalChip: {
-    minHeight: 24,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   bustChip: { backgroundColor: theme.colors.danger },
-  blackjackChip: { backgroundColor: theme.colors.gold },
-  totalText: { color: theme.colors.text, fontSize: 10, fontWeight: '700' },
-  blackjackText: { color: theme.colors.cardText },
-  cardText: {
-    color: theme.colors.text,
-    fontSize: theme.text.md,
-    fontWeight: '600',
+  bjChip: { backgroundColor: theme.colors.gold },
+  chipText: { color: theme.colors.text, fontSize: 11, fontWeight: '700', ...theme.numbers },
+  bjText: { color: theme.colors.background },
+  spot: {
+    width: 44,
+    maxWidth: '96%',
+    aspectRatio: 1,
+    marginTop: 4,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: theme.colors.feltLine,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  spotMine: { borderColor: theme.colors.gold, backgroundColor: 'rgba(212,175,90,0.15)' },
+  spotSelected: { borderColor: theme.colors.ok, borderWidth: 3 },
+  spotText: { color: theme.colors.text, fontSize: theme.text.md, fontWeight: '700' },
+  spotTextMine: { color: theme.colors.gold },
+  spotCaption: { color: theme.colors.textMuted, fontSize: 11 },
 });
