@@ -38,6 +38,10 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **COOP/COEP** | Dos cabeceras HTTP que permiten la memoria compartida; SQLite en la web las necesita |
 | **Sandbox** | Entorno aislado donde corre Codex, con permisos limitados de red y de escritura |
 | **Commit / push** | Guardar una foto de los cambios en git y subirla a GitHub |
+| **Inmutabilidad** | No se modifica un estado: cada cambio crea uno nuevo. `dealSeen(zapato, '5')` devuelve otro zapato y el original queda igual. Es la base del deshacer y rehacer |
+| **Valor derivado** | Se calcula a partir de otros datos en lugar de guardarse. El conteo corrido se deriva de las cartas vistas, así que nunca puede desincronizarse |
+| **−0 (cero negativo)** | `Math.trunc(-0.4)` da −0 en JavaScript. Se ve como 0, pero `Object.is(-0, 0)` es falso. Se normaliza a 0 |
+| **Prueba aleatoria (property test)** | Generar miles de casos al azar y comprobar que una propiedad se cumple siempre, por ejemplo que el conteo es igual a la suma de las cartas vistas |
 
 ---
 
@@ -54,6 +58,10 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | 2026-11-25 | Hosting futuro: Cloudflare Pages, Netlify o Vercel | SQLite en la web exige cabeceras COOP/COEP | GitHub Pages: no permite cabeceras propias |
 | 2026-11-25 | J, Q y K se guardan como un solo rango `'T'` | Para el conteo y la estrategia solo importa que valen 10. Probabilidades directas: P(10) = 16/52 | 13 rangos internos: más casos sin ningún beneficio |
 | 2026-11-25 | `parseRank` rechaza entradas raras (`'1O'`, `'11'`, `'00'`) | Una carta mal tecleada tiene que fallar de forma visible, no contar mal en silencio | Aceptar y adivinar |
+| 2026-11-25 | Mazos restantes **exactos** por defecto (cartas restantes ÷ 52), configurable a medio mazo o mazo entero | "Conteo real de lo que se ha descubierto, nada de corazonadas": la app sabe la cifra exacta. Las opciones aproximadas quedan para el modo práctica | Estimar al medio mazo como un humano |
+| 2026-11-25 | Para los índices, el conteo real se **trunca hacia cero**, configurable a piso o redondeo. En pantalla se muestra con un decimal | Es la convención habitual. Pendiente en la Fase 3: confirmar con qué convención se calcularon los índices publicados | Piso (cambia las decisiones con conteos negativos) |
+| 2026-11-25 | La carta quemada queda dentro de "no vistas" por rango, pero resta de las cartas que quedan en el zapato | Su rango es desconocido: para las probabilidades equivale a una carta no vista. Físicamente ya salió, así que suma a la penetración | Restarla de algún rango (sería inventar) |
+| 2026-11-25 | El zapato es inmutable y el conteo se deriva de él | Una sola fuente de verdad, y deshacer y rehacer salen gratis en la Fase 4 | Guardar el conteo aparte (puede desincronizarse) |
 
 ---
 
@@ -66,6 +74,8 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | `npm.ps1 … la ejecución de scripts está deshabilitada` | La política de PowerShell de Windows bloquea scripts `.ps1` | Usar `npm.cmd` y `npx.cmd` | En Windows, `npm` es un script de PowerShell; la versión `.cmd` lo esquiva sin tocar la seguridad |
 | La plantilla traía la web en modo `server` y el nombre `.tmp-app` | Valores por defecto de la plantilla | Revisar y corregir `app.json` | Nunca aceptar una plantilla sin revisarla: trae supuestos que no son los tuyos |
 | Codex dijo "cambié la configuración" sin decir qué | Reporte impreciso | Revisar el diff con `git diff`: no había ningún cambio | **Verificar, no confiar:** el diff dice la verdad, el reporte no siempre |
+| Codex "editó las pruebas" tras un primer fallo (Fase 1) | Repartía más de 4 ases en un zapato de 1 mazo | Revisar línea por línea que ningún valor esperado cambió; solo cambió qué cartas se reparten | Cuando alguien cambia una prueba para que pase, se revisa siempre: puede ser legítimo o puede esconder un error |
+| Codex dejó una prueba de relleno que no comprobaba nada útil | Exceso de celo por "cubrir" funciones auxiliares | Eliminarla | Una prueba que no puede fallar no prueba nada |
 
 ---
 
