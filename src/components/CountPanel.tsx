@@ -1,0 +1,163 @@
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { runningCount, trueCount, decksRemaining } from '../core/hilo';
+import type { TableSession } from '../core/session';
+import { penetration } from '../core/shoe';
+import { SEATS, type SeatNumber } from '../core/table';
+import { theme } from '../ui/theme';
+
+type CountPanelProps = {
+  session: TableSession;
+  onMySeat?(seat: SeatNumber): void;
+};
+
+export function CountPanel({ session, onMySeat }: CountPanelProps) {
+  const [seatPickerOpen, setSeatPickerOpen] = useState(false);
+  const shoe = session.round?.shoe;
+
+  return (
+    <View style={styles.panel}>
+      {session.status === 'lastRound' && (
+        <Text style={styles.warning}>ÚLTIMA RONDA: después se baraja</Text>
+      )}
+      <View style={styles.row}>
+        {shoe ? (
+          <>
+            <Text style={styles.number}>Corrido {runningCount(shoe)}</Text>
+            <Text style={[styles.number, styles.realNumber]}>
+              Real {trueCount(shoe).toFixed(1)}
+            </Text>
+            <Text style={styles.number}>Mazos {decksRemaining(shoe).toFixed(1)}</Text>
+          </>
+        ) : (
+          <Text style={styles.muted}>Corrido — · Real — · Mazos —</Text>
+        )}
+        {onMySeat && (
+          <View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Cambiar asiento. Asiento ${session.mySeat ?? 'sin asignar'}`}
+              accessibilityState={{ expanded: seatPickerOpen }}
+              onPress={() => setSeatPickerOpen((open) => !open)}
+              style={styles.seatToggle}
+            >
+              <Text style={styles.seatToggleText}>
+                Asiento {session.mySeat ?? '—'} ▾
+              </Text>
+            </Pressable>
+            {seatPickerOpen && (
+              <View style={styles.seatOptions}>
+                {SEATS.map((seat) => (
+                  <Pressable
+                    key={seat}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Cambiar asiento al puesto ${seat}`}
+                    onPress={() => {
+                      onMySeat(seat);
+                      setSeatPickerOpen(false);
+                    }}
+                    style={styles.seatOption}
+                  >
+                    <Text
+                      style={[
+                        styles.seatOptionText,
+                        seat === session.mySeat && styles.selectedSeat,
+                      ]}
+                    >
+                      {seat}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+      {shoe && (
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.min(100, penetration(shoe) * 100)}%` },
+            ]}
+          />
+          <View
+            style={[
+              styles.cutMarker,
+              { left: `${session.rules.cutPenetration * 100}%` },
+            ]}
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  panel: {
+    padding: theme.space.sm,
+    borderRadius: theme.radius.sm,
+    backgroundColor: theme.colors.card,
+  },
+  warning: {
+    color: theme.colors.warning,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  number: {
+    color: theme.colors.text,
+    fontSize: theme.text.lg,
+    ...theme.numbers,
+  },
+  realNumber: {
+    fontWeight: '700',
+  },
+  muted: {
+    color: theme.colors.textMuted,
+  },
+  seatToggle: {
+    minHeight: theme.minTouch,
+    justifyContent: 'center',
+    paddingHorizontal: theme.space.xs,
+  },
+  seatToggleText: {
+    color: theme.colors.gold,
+  },
+  seatOptions: {
+    flexDirection: 'row',
+  },
+  seatOption: {
+    minWidth: theme.minTouch,
+    minHeight: theme.minTouch,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seatOptionText: {
+    color: theme.colors.textMuted,
+  },
+  selectedSeat: {
+    color: theme.colors.gold,
+  },
+  progressTrack: {
+    height: 8,
+    marginTop: theme.space.xs,
+    borderRadius: 4,
+    backgroundColor: theme.colors.muted,
+  },
+  progressFill: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.felt,
+  },
+  cutMarker: {
+    position: 'absolute',
+    top: -2,
+    width: 2,
+    height: 12,
+    backgroundColor: theme.colors.warning,
+  },
+});

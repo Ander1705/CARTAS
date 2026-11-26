@@ -1,40 +1,127 @@
-import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
-import { getItem, setItem } from "../state/db";
+import { StatusBar } from 'expo-status-bar';
+import { useWindowDimensions, Text, View, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActionBar } from '../components/ActionBar';
+import { CardKeypad } from '../components/CardKeypad';
+import { CountPanel } from '../components/CountPanel';
+import { ErrorLine } from '../components/ErrorLine';
+import { StartShoePanel } from '../components/StartShoePanel';
+import { TableView } from '../components/TableView';
+import { useTableSession } from '../state/useTableSession';
+import { theme } from '../ui/theme';
 
 export default function Index() {
-  const hasIncremented = useRef(false);
-  const [opens, setOpens] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { loading, session, error, dispatch, canUndo, canRedo } = useTableSession();
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
+  const starting = session.status === 'waiting' || session.status === 'observing';
 
-  useEffect(() => {
-    if (hasIncremented.current) return;
-    hasIncremented.current = true;
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loading}>
+        <StatusBar style="light" />
+        <Text style={styles.loadingText}>Cargando…</Text>
+      </SafeAreaView>
+    );
+  }
 
-    async function incrementOpens() {
-      try {
-        const storedOpens = await getItem("app_opens");
-        const parsedOpens = Number.parseInt(storedOpens ?? "", 10);
-        const nextOpens = (Number.isNaN(parsedOpens) ? 0 : parsedOpens) + 1;
-        await setItem("app_opens", String(nextOpens));
-        setOpens(nextOpens);
-      } catch (caughtError) {
-        console.error(caughtError);
-        setError(caughtError instanceof Error ? caughtError.message : String(caughtError));
-      }
-    }
-
-    void incrementOpens();
-  }, []);
+  const center = starting ? (
+    <StartShoePanel
+      status={session.status}
+      onStart={(seat) => dispatch({ type: 'start', seat })}
+      onObserve={() => dispatch({ type: 'observe' })}
+    />
+  ) : (
+    <>
+      <CountPanel
+        session={session}
+        onMySeat={(seat) => dispatch({ type: 'mySeat', seat })}
+      />
+      <TableView
+        round={session.round}
+        mySeat={session.mySeat}
+        onPressSeat={(seat, hand) => {
+          if (session.round?.phase === 'initial' || session.round?.phase === 'players') {
+            dispatch({ type: 'target', target: { kind: 'seat', seat, hand } });
+          }
+        }}
+        onLongPressSeat={(seat) => dispatch({ type: 'toggleSeat', seat })}
+        onPressDealer={() => dispatch({ type: 'target', target: { kind: 'dealer' } })}
+        onPressCard={(target, index) =>
+          dispatch({ type: 'removeCard', target, index })
+        }
+      />
+      <ErrorLine error={error} />
+      <ActionBar
+        round={session.round}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={() => dispatch({ type: 'undo' })}
+        onRedo={() => dispatch({ type: 'redo' })}
+        onSplit={() => dispatch({ type: 'split' })}
+        onNext={() => dispatch({ type: 'next' })}
+        onFinish={() => dispatch({ type: 'finishRound' })}
+      />
+    </>
+  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#0B0F14", alignItems: "center", justifyContent: "center" }}>
-      <Text accessibilityRole="header" style={{ color: "#F5F7FA", fontSize: 28 }}>
-        Contador Hi-Lo
-      </Text>
-      <Text style={{ color: error ? "#FF6B6B" : "#F5F7FA", fontSize: 18 }}>
-        {error ? `Error de guardado: ${error}` : `Aperturas: ${opens ?? "\u2026"}`}
-      </Text>
-    </View>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar style="light" />
+      {landscape ? (
+        <View style={styles.landscape}>
+          <CardKeypad
+            layout="split"
+            side="left"
+            onCard={(rank) => dispatch({ type: 'card', rank })}
+          />
+          <View style={styles.center}>{center}</View>
+          <CardKeypad
+            layout="split"
+            side="right"
+            onCard={(rank) => dispatch({ type: 'card', rank })}
+          />
+        </View>
+      ) : (
+        <View style={styles.portrait}>
+          {center}
+          {!starting && (
+            <CardKeypad
+              layout="grid"
+              onCard={(rank) => dispatch({ type: 'card', rank })}
+            />
+          )}
+        </View>
+      )}
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.background,
+  },
+  loadingText: {
+    color: theme.colors.text,
+  },
+  screen: {
+    flex: 1,
+    padding: theme.space.xs,
+    backgroundColor: theme.colors.background,
+  },
+  landscape: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  center: {
+    flex: 3,
+    minWidth: 0,
+  },
+  portrait: {
+    flex: 1,
+  },
+});
