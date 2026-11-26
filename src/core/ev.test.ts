@@ -45,3 +45,27 @@ describe('playerEVs', () => {
     expect(() => playerEVs(shoe, ['T', 'T', '5'], '5', rules)).toThrow('La mano ya se pasó');
   });
 });
+
+describe('playerEVs split', () => {
+  it('S1', () => { const { shoe, rules } = fullShoe(['8', '8'], 'T'); expect(playerEVs(shoe, ['8', '8'], 'T', rules).split).toBeCloseTo(-0.48477789153558193, 12); });
+  it('S2', () => { const { shoe, rules } = fullShoe(['8', '8'], '6'); expect(playerEVs(shoe, ['8', '8'], '6', rules).split).toBeCloseTo(0.3272779839067592, 12); });
+  it('S3', () => { const { shoe, rules } = fullShoe(['A', 'A'], '6'); expect(playerEVs(shoe, ['A', 'A'], '6', rules).split).toBeCloseTo(0.6786123315123708, 12); });
+  it('S4', () => { const { shoe, rules } = fullShoe(['A', 'A'], '6', { hitSplitAces: true }); expect(playerEVs(shoe, ['A', 'A'], '6', rules).split).toBeCloseTo(0.9875643127579266, 12); }, 60000);
+  it('S5', () => { const { shoe, rules } = fullShoe(['A', 'A'], 'A'); expect(playerEVs(shoe, ['A', 'A'], 'A', rules).split).toBeCloseTo(0.12258518621203635, 12); }, 60000);
+  it('S6', () => { const { shoe, rules } = fullShoe(['9', '9'], '7'); const ev = playerEVs(shoe, ['9', '9'], '7', rules); expect(ev.split).toBeCloseTo(0.3692610292009455, 12); expect(ev.stand).toBeCloseTo(0.3995629467019545, 12); });
+  it('S7', () => { const { shoe, rules } = fullShoe(['9', '9'], '9'); expect(playerEVs(shoe, ['9', '9'], '9', rules).split).toBeCloseTo(-0.09477012415531888, 12); });
+  it('S8', () => { const { shoe, rules } = fullShoe(['4', '4'], '5'); const ev = playerEVs(shoe, ['4', '4'], '5', rules); expect(ev.split).toBeCloseTo(0.10022207014913649, 12); expect(ev.hit).toBeCloseTo(0.08038377311610825, 12); });
+  it('S9', () => { const { shoe, rules } = fullShoe(['4', '4'], '5', { doubleAfterSplit: false }); expect(playerEVs(shoe, ['4', '4'], '5', rules).split).toBeCloseTo(-0.011016333220271582, 12); });
+  it('S10', () => { const { shoe, rules } = fullShoe(['4', '4'], '5', { doubleOn: '10-11' }); expect(playerEVs(shoe, ['4', '4'], '5', rules).split).toBeCloseTo(0.07954706529766688, 12); });
+  it('S11', () => { const { shoe, rules } = fullShoe(['2', '2'], '3'); const ev = playerEVs(shoe, ['2', '2'], '3', rules); expect(ev.split).toBeCloseTo(-0.018911662393926, 12); expect(ev.hit).toBeCloseTo(-0.08218773793799158, 12); }, 60000);
+  it('S12', () => { const { shoe, rules } = fullShoe(['2', '2'], '3', { doubleAfterSplit: false }); expect(playerEVs(shoe, ['2', '2'], '3', rules).split).toBeCloseTo(-0.09569962026410196, 12); }, 60000);
+  it('S13', () => { const { shoe, rules } = fullShoe(['8', '8'], 'A', { dealerPeeks: false }); expect(playerEVs(shoe, ['8', '8'], 'A', rules).split).toBeCloseTo(-0.8873361978256207, 12); });
+  it('S14', () => { const { shoe, rules } = fullShoe(['T', 'T'], '6'); expect(playerEVs(shoe, ['T', 'T'], '6', rules).split).toBeCloseTo(0.5689865735765605, 12); });
+  it('S15', () => { const { shoe, rules } = fullShoe(['7', '7'], '8'); const ev = playerEVs(shoe, ['7', '7'], '8', rules); expect(ev.split).toBeCloseTo(-0.38924805590054606, 12); expect(ev.hit).toBeCloseTo(-0.37625355168248853, 12); });
+  it('S16', () => { const { shoe, rules } = fullShoe(['6', '6'], '2'); expect(playerEVs(shoe, ['6', '6'], '2', rules).split).toBeCloseTo(-0.20894380937475648, 12); });
+  it('S17 nulls', () => {
+    const a = fullShoe(['8', '8'], 'T', { maxSplitHands: 1 }); expect(playerEVs(a.shoe, ['8', '8'], 'T', a.rules).split).toBeNull();
+    const b = fullShoe(['T', '6'], 'T'); expect(playerEVs(b.shoe, ['T', '6'], 'T', b.rules).split).toBeNull();
+    const c = fullShoe(['T', '3', '3'], 'T'); expect(playerEVs(c.shoe, ['T', '3', '3'], 'T', c.rules).split).toBeNull();
+  });
+});

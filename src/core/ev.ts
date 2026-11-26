@@ -3,7 +3,7 @@ import { dealerDistribution, type DealerDistribution } from './dealer';
 import type { Rules } from './rules';
 import type { ShoeState } from './shoe';
 
-export interface PlayerEVs { stand: number; hit: number; double: number | null; surrender: number | null; }
+export interface PlayerEVs { stand: number; hit: number; double: number | null; surrender: number | null; split: number | null; }
 
 const VALUE: Readonly<Record<Rank, number>> = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10 };
 const bestTotal = (hard: number, hasAce: boolean): number => hasAce && hard + 10 <= 21 ? hard + 10 : hard;
@@ -59,20 +59,45 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
   };
   const hit = hitValue(hard, hasAce);
 
-  let canDouble = hand.length === 2;
-  if (rules.doubleOn !== 'any') canDouble &&= !hasAce && (rules.doubleOn === '9-11' ? hard >= 9 && hard <= 11 : hard >= 10 && hard <= 11);
-  let double: number | null = null;
-  if (canDouble) {
+  const doubleValue = (playerHard: number, playerAce: boolean): number => {
     const ps = probabilities();
     let value = 0;
     for (let i = 0; i < counts.length; i++) {
       if (counts[i] === 0 || ps[i] === 0) continue;
       counts[i]--;
-      value += ps[i] * standEV(bestTotal(hard + VALUE[RANKS[i]], hasAce || RANKS[i] === 'A'), dealer());
+      value += ps[i] * standEV(bestTotal(playerHard + VALUE[RANKS[i]], playerAce || RANKS[i] === 'A'), dealer());
       counts[i]++;
     }
-    double = 2 * value;
+    return 2 * value;
+  };
+  let canDouble = hand.length === 2;
+  if (rules.doubleOn !== 'any') canDouble &&= !hasAce && (rules.doubleOn === '9-11' ? hard >= 9 && hard <= 11 : hard >= 10 && hard <= 11);
+  const double = canDouble ? doubleValue(hard, hasAce) : null;
+  // split: APROXIMADO (sin re-dividir; cada mano ignora las cartas de la otra)
+  let split: number | null = null;
+  if (hand.length === 2 && hand[0] === hand[1] && rules.maxSplitHands >= 2) {
+    const x = hand[0];
+    const ps = probabilities();
+    let single = 0;
+    for (let i = 0; i < counts.length; i++) {
+      if (counts[i] === 0 || ps[i] === 0) continue;
+      counts[i]--;
+      const rank = RANKS[i];
+      const splitHard = VALUE[x] + VALUE[rank];
+      const splitAce = x === 'A' || rank === 'A';
+      let value: number;
+      if (x === 'A' && !rules.hitSplitAces) {
+        value = standEV(bestTotal(1 + VALUE[rank], true), dealer());
+      } else {
+        value = Math.max(standEV(bestTotal(splitHard, splitAce), dealer()), hitValue(splitHard, splitAce));
+        const splitCanDouble = rules.doubleAfterSplit && (rules.doubleOn === 'any' || (!splitAce && (rules.doubleOn === '9-11' ? splitHard >= 9 && splitHard <= 11 : splitHard >= 10 && splitHard <= 11)));
+        if (splitCanDouble) value = Math.max(value, doubleValue(splitHard, splitAce));
+      }
+      counts[i]++;
+      single += ps[i] * value;
+    }
+    split = 2 * single;
   }
   const surrender = rules.surrender === 'late' && hand.length === 2 ? -0.5 * (1 - dRoot.blackjack) - dRoot.blackjack : null;
-  return { stand, hit, double, surrender };
+  return { stand, hit, double, surrender, split };
 }

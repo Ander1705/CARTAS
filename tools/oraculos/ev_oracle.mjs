@@ -77,7 +77,7 @@ export function playerEVs(counts, hand, up, rules) {
   const stand = (hard, ace) => standEV(best(hard, ace), dealerD());
   function bestPlay(hard, ace) {
     if (best(hard, ace) > 21) return -1;
-    const key = c.join(',');
+    const key = c.join(',') + '|' + hard + '|' + +ace; // el total va en la clave: dividir llega a las mismas cartas con otro total
     if (memo.has(key)) return memo.get(key);
     const v = Math.max(stand(hard, ace), hit(hard, ace));
     memo.set(key, v);
@@ -106,7 +106,36 @@ export function playerEVs(counts, hand, up, rules) {
   }
   const pbj = dealerD().bj || 0; // con peek es 0
   const two = hand.length === 2;
-  return { stand: stand(hard0, ace0), hit: hit(hard0, ace0), double: two ? dbl : null, surrender: two ? -0.5 * (1 - pbj) - pbj : null };
+  // Dividir (APROXIMADO): 2 × EV de una mano que empieza con una sola carta x, sin re-dividir;
+  // la segunda mano ignora las cartas que sacó la primera. Ases: una carta y plantarse.
+  // DAS: se puede doblar la mano de 2 cartas si doubleOn lo permite. 21 con 2 cartas no es blackjack.
+  let split = null;
+  if (two && hand[0] === hand[1] && (rules.maxSplitHands ?? 4) >= 2) {
+    const x = hand[0];
+    const canDbl = (hard, ace) => { const on = rules.doubleOn ?? 'any'; if (on === 'any') return true; if (ace) return false; return on === '9-11' ? hard >= 9 && hard <= 11 : hard >= 10 && hard <= 11; };
+    const ps = drawProbs();
+    let single = 0;
+    for (let r = 0; r < 10; r++) {
+      if (!ps[r]) continue;
+      c[r]--;
+      const h = VAL[x] + VAL[r], a = x === 0 || r === 0;
+      let v;
+      if (x === 0 && !rules.hitSplitAces) v = stand(h, a);
+      else {
+        v = Math.max(stand(h, a), hit(h, a));
+        if ((rules.das ?? true) && canDbl(h, a)) {
+          const q = drawProbs();
+          let d = 0;
+          for (let i = 0; i < 10; i++) { if (!q[i]) continue; c[i]--; d += q[i] * 2 * stand(h + VAL[i], a || i === 0); c[i]++; }
+          v = Math.max(v, d);
+        }
+      }
+      c[r]++;
+      single += ps[r] * v;
+    }
+    split = 2 * single;
+  }
+  return { stand: stand(hard0, ace0), hit: hit(hard0, ace0), double: two ? dbl : null, surrender: two ? -0.5 * (1 - pbj) - pbj : null, split };
 }
 
 export const shoeCounts = (decks) => [4, 4, 4, 4, 4, 4, 4, 4, 4, 16].map((n) => n * decks);
@@ -120,6 +149,6 @@ if (process.argv[1] && process.argv[1].endsWith('ev_oracle.mjs')) {
   const c = shoeCounts(Number(decks));
   for (const i of [...hand, up]) c[i]--;
   const t = Date.now();
-  const e = playerEVs(c, hand, up, { peek: peek === '1', hitSoft17: h17 === '1' });
+  const e = playerEVs(c, hand, up, { peek: peek === '1', hitSoft17: h17 === '1', das: process.argv[7] !== '0' });
   console.log(JSON.stringify(e), `${Date.now() - t} ms`);
 }

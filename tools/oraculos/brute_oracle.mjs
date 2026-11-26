@@ -55,7 +55,7 @@ export function bruteEVs(pool, hand, up, { peek, hitSoft17 }) {
   return { stand: standV([]), hit: hitV([]), double: dbl };
 }
 
-if (process.argv[1] && process.argv[1].endsWith('brute_oracle.mjs')) {
+if (process.argv[1] && process.argv[1].endsWith('brute_oracle.mjs') && process.argv[2] !== 'split') {
   // Zapatos aleatorios de 7-8 cartas con muchas cartas altas, para que nunca se agote.
   let seed = 12345;
   const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
@@ -76,4 +76,39 @@ if (process.argv[1] && process.argv[1].endsWith('brute_oracle.mjs')) {
     n++;
   }
   console.log(`casos comparados: ${n}, saltados por zapato agotado: ${skipped}, diferencia máxima: ${worst.toExponential(2)}`);
+}
+
+// Dividir (misma aproximación que el oráculo): 2 × valor de UNA mano que empieza con x y recibe
+// su segunda carta del zapato (π[1]); se juega lo mejor entre plantarse, pedir y (si DAS) doblar.
+export function bruteSplitSingle(pool, x, up, rules) {
+  const forb = rules.peek && (up === 0 || up === 9) ? (up === 0 ? 9 : 0) : -1;
+  const P = perms(pool).filter((pi) => pi[0] !== forb);
+  let v = 0;
+  for (const r of new Set(P.map((pi) => pi[1]))) {
+    const w = P.filter((pi) => pi[1] === r).length / P.length;
+    // Reutiliza bruteEVs: la mano [x, r] con el zapato sin esa r, condicionando a π[1] = r.
+    const rest = pool.slice(); rest.splice(rest.indexOf(r), 1);
+    const e = bruteEVs(rest, [x, r], up, rules);
+    v += w * (x === 0 ? e.stand : Math.max(e.stand, e.hit, rules.das ? e.double : -Infinity));
+  }
+  return 2 * v;
+}
+
+if (process.argv[1] && process.argv[1].endsWith('brute_oracle.mjs') && process.argv[2] === 'split') {
+  let seed = 999;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  let n = 0, worst = 0;
+  for (let t = 0; t < 150; t++) {
+    const pool = Array.from({ length: 7 }, () => (rnd() < 0.45 ? 9 : Math.floor(rnd() * 10)));
+    const x = Math.floor(rnd() * 10);
+    const up = rnd() < 0.5 ? (rnd() < 0.5 ? 0 : 9) : Math.floor(rnd() * 10);
+    const rules = { peek: rnd() < 0.7, hitSoft17: false, das: rnd() < 0.5, doubleOn: 'any', hitSplitAces: false };
+    const counts = Array(10).fill(0); pool.forEach((i) => counts[i]++);
+    const forb = rules.peek && (up === 0 || up === 9) ? (up === 0 ? 9 : 0) : -1;
+    if (forb >= 0 && counts[forb] === 7) continue;
+    let b; try { b = bruteSplitSingle(pool, x, up, rules); } catch { continue; }
+    const o = playerEVs(counts, [x, x], up, rules).split;
+    worst = Math.max(worst, Math.abs(b - o)); n++;
+  }
+  console.log(`dividir: ${n} casos, diferencia máxima ${worst.toExponential(2)}`);
 }
