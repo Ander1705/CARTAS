@@ -85,7 +85,6 @@ export function TableView({
             {dealerCards.map((card, index) => (
               <Pressable
                 key={`${index}-${card}`}
-                accessibilityRole="button"
                 accessibilityLabel={`Carta ${labelCard(card)} del crupier. Mantén presionado para quitarla`}
                 delayLongPress={500}
                 onPress={onPressDealer}
@@ -146,7 +145,6 @@ export function TableView({
                       {cards.map((card, index) => (
                         <Pressable
                           key={`${index}-${card}`}
-                          accessibilityRole="button"
                           accessibilityLabel={`Carta ${labelCard(card)} del puesto ${seat}. Mantén presionado para quitarla`}
                           delayLongPress={500}
                           onPress={() => onPressSeat(seat, hand)}
