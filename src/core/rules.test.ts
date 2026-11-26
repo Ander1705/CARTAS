@@ -45,6 +45,7 @@ describe('rules', () => {
     expect(UNCONFIRMED_RULES).not.toContain('dealerHitsSoft17');
     expect(UNCONFIRMED_RULES).not.toContain('blackjackPays');
     expect(UNCONFIRMED_RULES).not.toContain('insurancePays');
+    expect(UNCONFIRMED_RULES).not.toContain('doubleAfterSplit');
     for (const key of UNCONFIRMED_RULES) {
       expect(key in DEFAULT_RULES).toBe(true);
     }

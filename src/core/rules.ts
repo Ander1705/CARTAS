@@ -39,7 +39,6 @@ export const DEFAULT_RULES: Readonly<Rules> = {
 export const UNCONFIRMED_RULES: readonly (keyof Rules)[] = [
   'decks',
   'burnCards',
-  'doubleAfterSplit',
   'surrender',
   'dealerPeeks',
   'maxSplitHands',

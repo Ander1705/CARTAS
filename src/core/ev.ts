@@ -3,18 +3,21 @@ import { dealerDistribution, type DealerDistribution } from './dealer';
 import type { Rules } from './rules';
 import type { ShoeState } from './shoe';
 
-export interface PlayerEVs { stand: number; hit: number; double: number | null; surrender: number | null; split: number | null; }
+export interface PlayerEVs { stand: number; hit: number | null; double: number | null; surrender: number | null; split: number | null; }
 
 const VALUE: Readonly<Record<Rank, number>> = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10 };
 const bestTotal = (hard: number, hasAce: boolean): number => hasAce && hard + 10 <= 21 ? hard + 10 : hard;
 
-export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, rules: Rules): PlayerEVs {
+export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, rules: Rules, splitHands = 1): PlayerEVs {
+  // For split hands, hand[0] must be the original card from the pair.
+  if (!Number.isInteger(splitHands) || splitHands < 1) throw new Error('splitHands debe ser un entero ≥ 1');
+  const fromSplit = splitHands >= 2;
   if (hand.length < 2) throw new Error('La mano necesita al menos 2 cartas');
   let hard = 0;
   let hasAce = false;
   for (const rank of hand) { hard += VALUE[rank]; hasAce ||= rank === 'A'; }
   const total = bestTotal(hard, hasAce);
-  if (hand.length === 2 && total === 21) throw new Error('La mano es blackjack: se paga sin decidir');
+  if (!fromSplit && hand.length === 2 && total === 21) throw new Error('La mano es blackjack: se paga sin decidir');
   if (total > 21) throw new Error('La mano ya se pasó');
 
   const counts = RANKS.map((rank) => shoe.unseen[rank]);
@@ -57,7 +60,8 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
     memo.set(key, value);
     return value;
   };
-  const hit = hitValue(hard, hasAce);
+  const splitAceLocked = fromSplit && hand[0] === 'A' && !rules.hitSplitAces;
+  const hit = splitAceLocked ? null : hitValue(hard, hasAce);
 
   const doubleValue = (playerHard: number, playerAce: boolean): number => {
     const ps = probabilities();
@@ -70,12 +74,12 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
     }
     return 2 * value;
   };
-  let canDouble = hand.length === 2;
+  let canDouble = hand.length === 2 && (!fromSplit || rules.doubleAfterSplit) && !splitAceLocked;
   if (rules.doubleOn !== 'any') canDouble &&= !hasAce && (rules.doubleOn === '9-11' ? hard >= 9 && hard <= 11 : hard >= 10 && hard <= 11);
   const double = canDouble ? doubleValue(hard, hasAce) : null;
   // split: APROXIMADO (sin re-dividir; cada mano ignora las cartas de la otra)
   let split: number | null = null;
-  if (hand.length === 2 && hand[0] === hand[1] && rules.maxSplitHands >= 2) {
+  if (hand.length === 2 && hand[0] === hand[1] && splitHands < rules.maxSplitHands && (!fromSplit || hand[0] !== 'A' || rules.resplitAces)) {
     const x = hand[0];
     const ps = probabilities();
     let single = 0;
@@ -98,6 +102,6 @@ export function playerEVs(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, 
     }
     split = 2 * single;
   }
-  const surrender = rules.surrender === 'late' && hand.length === 2 ? -0.5 * (1 - dRoot.blackjack) - dRoot.blackjack : null;
+  const surrender = !fromSplit && rules.surrender === 'late' && hand.length === 2 ? -0.5 * (1 - dRoot.blackjack) - dRoot.blackjack : null;
   return { stand, hit, double, surrender, split };
 }

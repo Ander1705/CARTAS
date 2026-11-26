@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import { dealSeen, newShoe, type ShoeState } from './shoe';
 import type { Rank } from './cards';
 import { DEFAULT_RULES, type Rules } from './rules';
@@ -7,6 +7,12 @@ import { playerEVs } from './ev';
 function fullShoe(hand: Rank[], upcard: Rank, changes: Partial<Rules> = {}) {
   let shoe = newShoe({ decks: 8, burnCards: 0, cutPenetration: 0.75 });
   for (const rank of [...hand, upcard]) shoe = dealSeen(shoe, rank);
+  return { shoe, rules: { ...DEFAULT_RULES, ...changes } };
+}
+
+function splitShoe(otherCards: Rank[], hand: Rank[], upcard: Rank, changes: Partial<Rules> = {}) {
+  let shoe = newShoe({ decks: 8, burnCards: 0, cutPenetration: 0.75 });
+  for (const rank of [...otherCards, ...hand, upcard]) shoe = dealSeen(shoe, rank);
   return { shoe, rules: { ...DEFAULT_RULES, ...changes } };
 }
 
@@ -68,4 +74,17 @@ describe('playerEVs split', () => {
     const b = fullShoe(['T', '6'], 'T'); expect(playerEVs(b.shoe, ['T', '6'], 'T', b.rules).split).toBeNull();
     const c = fullShoe(['T', '3', '3'], 'T'); expect(playerEVs(c.shoe, ['T', '3', '3'], 'T', c.rules).split).toBeNull();
   });
+});
+
+describe('playerEVs hands from split', () => {
+  jest.setTimeout(60000);
+  it('P1 evaluates a split hand', () => { const { shoe, rules } = splitShoe(['8'], ['8', '3'], '6'); const ev = playerEVs(shoe, ['8', '3'], '6', rules, 2); expect(ev.stand).toBeCloseTo(-0.1542828573942705, 12); expect(ev.hit).toBeCloseTo(0.33541670679233737, 12); expect(ev.double).toBeCloseTo(0.6708334135846747, 12); expect(ev.surrender).toBeNull(); expect(ev.split).toBeNull(); });
+  it('P2 respects DAS', () => { const { shoe, rules } = splitShoe(['8'], ['8', '3'], '6', { doubleAfterSplit: false }); const ev = playerEVs(shoe, ['8', '3'], '6', rules, 2); expect(ev.double).toBeNull(); expect(ev.hit).toBeCloseTo(0.33541670679233737, 12); });
+  it('P3 split 21 is not blackjack and split aces stay', () => { const { shoe, rules } = splitShoe(['A'], ['A', 'T'], '6'); const ev = playerEVs(shoe, ['A', 'T'], '6', rules, 2); expect(ev.stand).toBeCloseTo(0.9022104734257902, 12); expect(ev.hit).toBeNull(); expect(ev.double).toBeNull(); });
+  it('P4 permits hitting split aces when configured', () => { const { shoe, rules } = splitShoe(['A'], ['A', '5'], '6', { hitSplitAces: true }); const ev = playerEVs(shoe, ['A', '5'], '6', rules, 2); expect(ev.stand).toBeCloseTo(-0.1449146482521535, 12); expect(ev.hit).toBeCloseTo(0.10252867930957073, 12); expect(ev.double).toBeCloseTo(0.18796165736718343, 12); });
+  it('P5 permits re-splitting within the hand limit', () => { const { shoe, rules } = splitShoe(['8'], ['8', '8'], 'T'); const ev = playerEVs(shoe, ['8', '8'], 'T', rules, 2); expect(ev.split).toBeCloseTo(-0.4839468381506634, 12); expect(ev.stand).toBeCloseTo(-0.5367472822422266, 12); expect(ev.hit).toBeCloseTo(-0.535509731062372, 12); });
+  it('P6 stops re-splitting at maxSplitHands', () => { const { shoe, rules } = splitShoe(['8'], ['8', '8'], 'T'); expect(playerEVs(shoe, ['8', '8'], 'T', rules, 4).split).toBeNull(); });
+  it('P7 does not re-split aces by default', () => { const { shoe, rules } = splitShoe(['A'], ['A', 'A'], '6'); expect(playerEVs(shoe, ['A', 'A'], '6', rules, 2).split).toBeNull(); });
+  it('P8 disables surrender only after splitting', () => { const split = splitShoe(['8'], ['8', '3'], '6', { surrender: 'late' }); expect(playerEVs(split.shoe, ['8', '3'], '6', split.rules, 2).surrender).toBeNull(); const initial = fullShoe(['8', '3'], '6', { surrender: 'late' }); expect(playerEVs(initial.shoe, ['8', '3'], '6', initial.rules).surrender).toBe(-0.5); });
+  it('P9 validates splitHands', () => { const { shoe, rules } = fullShoe(['8', '3'], '6'); expect(() => playerEVs(shoe, ['8', '3'], '6', rules, 0)).toThrow('splitHands debe ser un entero ≥ 1'); expect(() => playerEVs(shoe, ['8', '3'], '6', rules, 1.5)).toThrow('splitHands debe ser un entero ≥ 1'); });
 });
