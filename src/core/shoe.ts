@@ -47,7 +47,10 @@ export function pastCut(shoe: ShoeState): boolean {
 }
 
 export function dealSeen(shoe: ShoeState, rank: Rank): ShoeState {
-  if (shoe.unseen[rank] === 0 || cardsLeftInShoe(shoe) === 0) {
+  if (cardsLeftInShoe(shoe) === 0) {
+    throw new Error('No quedan cartas en el zapato');
+  }
+  if (shoe.unseen[rank] === 0) {
     throw new Error(`No quedan cartas de rango ${rank}`);
   }
   return {

@@ -69,7 +69,7 @@ export function playRound(draw: () => Rank, rules: Rules, table: StrategyTable):
   if (hands.some((hand) => !hand.bust && !hand.surrendered)) {
     while (true) {
       const { total, soft } = handValue(dealerCards);
-      if (total > 17 || (total === 17 && !(soft && rules.dealerHitsSoft17)) || (total === 17 && !soft)) break;
+      if (total > 17 || (total === 17 && !(soft && rules.dealerHitsSoft17))) break;
       dealerCards.push(draw());
     }
   }

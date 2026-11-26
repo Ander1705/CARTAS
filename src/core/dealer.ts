@@ -20,9 +20,9 @@ export function dealerDistribution(shoe: ShoeState, upcard: Rank, options: Deale
     const key = `${counts.join(',')}|${hard}|${hasAce ? 1 : 0}|${oneCard ? 1 : 0}`;
     const cached = memo.get(key);
     if (cached) return cached;
-    const best = hasAce && hard + 10 <= 21 ? hard + 10 : hard;
-    if (best > 21) return terminal('bust');
     const soft = hasAce && hard + 10 <= 21;
+    const best = soft ? hard + 10 : hard;
+    if (best > 21) return terminal('bust');
     if (best >= 17 && !(best === 17 && soft && options.hitSoft17)) return terminal(String(best) as DealerOutcome);
 
     let total = 0;

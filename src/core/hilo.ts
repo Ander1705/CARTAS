@@ -18,6 +18,7 @@ export function decksRemaining(shoe: ShoeState, resolution: DeckResolution = 'ex
     case 'exact': return decks;
     case 'half': return Math.max(0.5, Math.round(decks * 2) / 2);
     case 'whole': return Math.max(1, Math.round(decks));
+    default: throw new Error(`Resolución de mazos inválida: ${resolution}`);
   }
 }
 
@@ -32,6 +33,7 @@ export function tcForIndex(tc: number, rounding: TcRounding = 'truncate'): numbe
     case 'truncate': result = Math.trunc(tc); break;
     case 'floor': result = Math.floor(tc); break;
     case 'round': result = Math.sign(tc) * Math.round(Math.abs(tc)); break;
+    default: throw new Error(`Redondeo inválido: ${rounding}`);
   }
   return result === 0 ? 0 : result;
 }

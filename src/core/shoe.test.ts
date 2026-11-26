@@ -76,7 +76,7 @@ describe('shoe', () => {
     expect(penetration(shoe)).toBe(1);
     expect(pastCut(shoe)).toBe(true);
     expect(trueCount(shoe)).toBe(0);
-    expect(() => dealSeen(shoe, 'A')).toThrow('No quedan cartas de rango A');
+    expect(() => dealSeen(shoe, 'A')).toThrow('No quedan cartas en el zapato');
   });
 
   it('crosses the cut at exactly 39 cards', () => {

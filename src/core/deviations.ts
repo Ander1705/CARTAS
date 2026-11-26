@@ -2,7 +2,7 @@ import type { Rank } from './cards';
 import type { Rules } from './rules';
 import type { ShoeState } from './shoe';
 import { playerEVs, type PlayerEVs } from './ev';
-import type { StrategyAction, StrategyTable } from './strategy';
+import { lookupAction, type StrategyTable } from './strategy';
 
 export type PlayAction = 'H' | 'S' | 'D' | 'P' | 'R';
 export interface CountDeviation {
@@ -48,8 +48,6 @@ export const COUNT_DEVIATIONS: readonly CountDeviation[] = [
 ];
 
 const VALUE: Readonly<Record<Rank, number>> = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, T: 10 };
-const COLUMNS: readonly Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'A'];
-
 export function findCountDeviation(hand: readonly Rank[], upcard: Rank, tcIndex: number, rules: Rules): CountDeviation | null {
   const hardTotal = hand.reduce((sum, rank) => sum + VALUE[rank], 0);
   const hasAce = hand.includes('A');
@@ -70,29 +68,8 @@ export interface PlayAdvice { evs: PlayerEVs; tableAction: PlayAction; bestActio
 
 export function adviseHand(shoe: ShoeState, hand: readonly Rank[], upcard: Rank, rules: Rules, table: StrategyTable, tcIndex: number, splitHands = 1): PlayAdvice {
   const evs = playerEVs(shoe, hand, upcard, rules, splitHands);
-  const hardTotal = hand.reduce((sum, rank) => sum + VALUE[rank], 0);
-  const soft = hand.includes('A') && hardTotal + 10 <= 21;
-  const total = soft ? hardTotal + 10 : hardTotal;
-  let tableChoice: StrategyAction;
-  if (hand.length === 2 && hand[0] === hand[1] && evs.split !== null) tableChoice = table.pairs[`${hand[0]}${hand[0]}`][COLUMNS.indexOf(upcard)];
-  else if (soft) tableChoice = total === 21 ? 'S' : total === 12 ? 'H' : table.soft[`A${total - 11}`][COLUMNS.indexOf(upcard)];
-  else tableChoice = total <= 4 ? 'H' : total >= 20 ? 'S' : table.hard[total][COLUMNS.indexOf(upcard)];
-
-  const hardSoftChoice = (): StrategyAction => soft
-    ? (total === 21 ? 'S' : total === 12 ? 'H' : table.soft[`A${total - 11}`][COLUMNS.indexOf(upcard)])
-    : (total <= 4 ? 'H' : total >= 20 ? 'S' : table.hard[total][COLUMNS.indexOf(upcard)]);
-  const resolve = (action: StrategyAction): PlayAction => {
-    switch (action) {
-      case 'D': return evs.double !== null ? 'D' : 'H';
-      case 'Ds': return evs.double !== null ? 'D' : 'S';
-      case 'P': return evs.split !== null ? 'P' : resolve(hardSoftChoice());
-      case 'R': return evs.surrender !== null ? 'R' : 'H';
-      default: return action;
-    }
-  };
-  let tableAction = resolve(tableChoice);
+  const tableAction = lookupAction(hand, upcard, table, { hit: evs.hit !== null, double: evs.double !== null, split: evs.split !== null, surrender: evs.surrender !== null });
   const actionEV = (action: PlayAction): number | null => action === 'S' ? evs.stand : action === 'H' ? evs.hit : action === 'D' ? evs.double : action === 'P' ? evs.split : evs.surrender;
-  if (actionEV(tableAction) === null) tableAction = 'S';
   const candidates: PlayAction[] = ['S', 'H', 'D', 'P', 'R'];
   let bestAction: PlayAction = candidates[0];
   for (const action of candidates.slice(1)) {
