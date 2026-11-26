@@ -61,6 +61,11 @@ function logTarget(target: Target): Target {
 
 export function nextHand(round: RoundState): RoundState {
   if (round.phase === 'dealer') return { ...round, phase: 'done', target: null };
+  // En el primer reparto, "Siguiente" salta el puesto que espera carta (no apostó esta ronda).
+  if (round.phase === 'initial' && round.target?.kind === 'seat') {
+    if (round.hands[round.target.seat].some((hand) => hand.length > 0)) throw new Error('Ese puesto ya tiene cartas: no se puede saltar');
+    return toggleSeat(round, round.target.seat);
+  }
   if (round.phase !== 'players' || round.target?.kind !== 'seat') throw new Error('Siguiente solo durante el juego');
   const { seat, hand } = round.target;
   if (hand + 1 < round.hands[seat].length) return { ...round, target: { kind: 'seat', seat, hand: hand + 1 } };

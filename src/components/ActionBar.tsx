@@ -45,6 +45,10 @@ export function ActionBar(props: Props) {
   const { width } = useWindowDimensions();
   const compact = width < 400;
   const done = props.round?.phase === 'done';
+  const target = props.round?.target;
+  // En el primer reparto, un puesto aún sin cartas se puede saltar.
+  const skipSeat = props.round?.phase === 'initial' && target?.kind === 'seat'
+    && props.round.hands[target.seat][0]?.length === 0 ? target.seat : null;
   // El campo se reinicia en cada ronda porque el padre lo monta con key por ronda.
   const [betText, setBetText] = useState(String(props.suggestedBet));
   const bet = Number(betText.replace(/\D/g, '') || '0');
@@ -71,7 +75,10 @@ export function ActionBar(props: Props) {
         <Button label="Deshacer" text="↶ Deshacer" enabled={props.canUndo} onPress={props.onUndo} desktop={props.desktop} />
         <Button label="Rehacer" text="↷" enabled={props.canRedo} onPress={props.onRedo} desktop={props.desktop} />
         <Button label="Dividir" text="Dividir" onPress={props.onSplit} desktop={props.desktop} />
-        {!done && <Button label="Siguiente" text={compact ? 'Sig.' : 'Siguiente'} onPress={props.onNext} desktop={props.desktop} />}
+        {!done && (skipSeat !== null
+          ? <Button label={`Saltar puesto ${skipSeat}: no apostó esta ronda`} text={compact ? `Saltar ${skipSeat}` : `Saltar puesto ${skipSeat}`}
+            onPress={props.onNext} desktop={props.desktop} />
+          : <Button label="Siguiente" text={compact ? 'Sig.' : 'Siguiente'} onPress={props.onNext} desktop={props.desktop} />)}
       </View>
     </View>
   );

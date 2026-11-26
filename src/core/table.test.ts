@@ -11,6 +11,26 @@ function roundWith(ranks: Rank[], active = active134, roundConfig: { direction: 
   return ranks.reduce((round, rank) => enterCard(round, rank), newRound(shoe(), active, roundConfig));
 }
 
+describe('saltar un puesto que no apostó', () => {
+  it('Siguiente en el primer reparto salta el puesto vacío solo en esta ronda', () => {
+    let round = nextHand(newRound(shoe(), active134, config));
+    expect(round.active[1]).toBe(false);
+    expect(round.target).toEqual({ kind: 'seat', seat: 3, hand: 0 });
+    round = ['2', '3', '4', '6', '7'].reduce((r, rank) => enterCard(r, rank as Rank), round);
+    expect(round.hands[1]).toEqual([]);
+    expect(round.hands[3]).toEqual([['2', '6']]);
+    expect(round.dealer).toEqual(['4']);
+    expect(round.phase).toBe('players');
+    expect(newRound(round.shoe, active134, config).active[1]).toBe(true);
+  });
+
+  it('no salta un puesto que ya recibió carta', () => {
+    const round = roundWith(['A', '2', '3', '4']);
+    expect(round.target).toEqual({ kind: 'seat', seat: 1, hand: 0 });
+    expect(() => nextHand(round)).toThrow('Ese puesto ya tiene cartas');
+  });
+});
+
 describe('table', () => {
   it('orders seats in either direction', () => {
     expect(seatOrder('rightToLeft')).toEqual([1, 2, 3, 4, 5, 6, 7]);

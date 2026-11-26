@@ -33,7 +33,8 @@ export default function Index() {
   const desktop = width >= 900;
   const starting = session.status === 'waiting' || session.status === 'observing';
   // Lo sugerido al empezar la ronda es lo que se debió apostar en ella.
-  const roundBet = session.round ? suggestedBet(trueCount(session.round.startShoe), bets.config) : 0;
+  const iSkipped = session.round !== null && session.mySeat !== null && !session.round.active[session.mySeat];
+  const roundBet = session.round && !iSkipped ? suggestedBet(trueCount(session.round.startShoe), bets.config) : 0;
 
   // Atajos de teclado en la PC: A, 2-9, 0/J/Q/K = 10, espacio = siguiente, retroceso = deshacer, N = zapato.
   useEffect(() => {
@@ -124,7 +125,7 @@ export default function Index() {
   );
   const actions = (
     <ActionBar
-      key={`${session.sessionStart}-${session.roundsPlayed}`}
+      key={`${session.sessionStart}-${session.roundsPlayed}-${iSkipped}`}
       suggestedBet={roundBet}
       desktop={desktop}
       round={session.round}
