@@ -30,8 +30,8 @@ export const DEFAULT_RULES: Readonly<Rules> = {
   surrender: 'none',
   dealerPeeks: true,
   maxSplitHands: 4,
-  resplitAces: false,
-  hitSplitAces: false,
+  resplitAces: true,
+  hitSplitAces: true,
   doubleOn: 'any',
 };
 
@@ -43,7 +43,6 @@ export const UNCONFIRMED_RULES: readonly (keyof Rules)[] = [
   'dealerPeeks',
   'maxSplitHands',
   'resplitAces',
-  'hitSplitAces',
   'doubleOn',
 ];
 

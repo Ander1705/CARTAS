@@ -46,6 +46,8 @@ describe('rules', () => {
     expect(UNCONFIRMED_RULES).not.toContain('blackjackPays');
     expect(UNCONFIRMED_RULES).not.toContain('insurancePays');
     expect(UNCONFIRMED_RULES).not.toContain('doubleAfterSplit');
+    expect(UNCONFIRMED_RULES).not.toContain('hitSplitAces');
+    expect(UNCONFIRMED_RULES).toContain('resplitAces');
     for (const key of UNCONFIRMED_RULES) {
       expect(key in DEFAULT_RULES).toBe(true);
     }
