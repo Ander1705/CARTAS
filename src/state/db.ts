@@ -9,6 +9,9 @@ function getDatabase() {
         "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
       );
       return database;
+    }).catch((error) => {
+      databasePromise = null;
+      throw error;
     });
   }
 

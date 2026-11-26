@@ -1,4 +1,4 @@
-import type { ShoeConfig } from './shoe';
+import { newShoe, type ShoeConfig } from './shoe';
 
 export type Surrender = 'none' | 'late';
 export type DoubleOn = 'any' | '9-11' | '10-11';
@@ -49,15 +49,7 @@ export const UNCONFIRMED_RULES: readonly (keyof Rules)[] = [
 ];
 
 export function validateRules(rules: Rules): Rules {
-  if (!Number.isInteger(rules.decks) || rules.decks < 1) {
-    throw new Error('La cantidad de mazos debe ser un entero mayor o igual a 1');
-  }
-  if (!Number.isInteger(rules.burnCards) || rules.burnCards < 0 || rules.burnCards >= rules.decks * 52) {
-    throw new Error('La cantidad de cartas quemadas debe ser un entero entre 0 y el total de cartas');
-  }
-  if (!Number.isFinite(rules.cutPenetration) || rules.cutPenetration <= 0 || rules.cutPenetration > 1) {
-    throw new Error('La penetración de corte debe ser mayor que 0 y menor o igual a 1');
-  }
+  newShoe(shoeConfigFrom(rules));
   if (!Number.isFinite(rules.blackjackPays) || rules.blackjackPays <= 0) {
     throw new Error('El pago de blackjack debe ser mayor que 0');
   }
