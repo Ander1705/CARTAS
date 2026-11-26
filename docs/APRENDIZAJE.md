@@ -21,7 +21,9 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **EV** (valor esperado) | Lo que ganas o pierdes **en promedio** por unidad apostada con una jugada | EV −0,12 = pierdes 12 centavos por cada peso, en promedio |
 | **Estrategia básica** | La mejor jugada para cada mano según las reglas, sin contar cartas | 16 contra un 10 visible → pedir |
 | **Desviación por conteo** | Cambiar la jugada básica cuando el conteo real pasa de un índice | Illustrious 18: 16 contra 10 → plantarse si el conteo real ≥ 0 |
-| **Desviación por composición** | Cambiar la jugada porque el EV calculado con las cartas reales que quedan así lo indica | Se explica en la Fase 3 |
+| **Desviación por composición** | Cambiar la jugada porque el EV calculado con las cartas reales que quedan así lo indica | Conteo +3, 10+6 contra 10: la tabla dice pedir, pero el cálculo exacto da plantarse −0,554 y pedir −0,566 → plantarse |
+| **Illustrious 18 / Fab 4** | Las 18 desviaciones por conteo que más valen (Schlesinger), más 4 de rendición | 16 contra 10: plantarse con conteo real ≥ 0 |
+| **Índice** | El conteo real a partir del cual conviene la desviación. Se calcula para unas reglas concretas (6 mazos, S17, DAS) | Con 8 mazos puede variar ±1 |
 
 ### Programación
 | Término | Qué es |
@@ -81,6 +83,8 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | 2026-11-25 | La tabla de referencia de `CLAUDE.md` se verificó contra Wikipedia (4-8 mazos, H17, DAS; cita a Wizard of Odds), más los 6 cambios para S17 que declara la misma página: coincide celda por celda. La tabla sin DAS no se encontró publicada (Wizard no carga, otra fuente da 403) | "La fuente manda": hay que verificar antes de usar la tabla como oráculo | Confiar en la memoria |
 | 2026-11-26 | Tabla generada: duros = promedio ponderado de las combinaciones de 2 cartas sin pareja; suaves = A,x; parejas = x,x. Una caché por columna | Es lo comparable con las tablas publicadas. Con tu mano real en la mesa se usarán tus cartas exactas (diferencia = "desviación por composición", paso 3.4) | Una mano representativa por total (sesgada) |
 | 2026-11-26 | Cada variante de reglas se prueba en su propio archivo | Jest corre los archivos en paralelo: 4 tablas en ~75 s en lugar de ~5 min | Todas en un archivo |
+| 2026-11-26 | Índices I18 y Fab 4 tomados de la fuente publicada (bj21.com y blackjackstrategy.io coinciden; 6 mazos, S17, DAS) y verificados con el motor: 20 de 21 a ±1. 16 contra 10 publicado 0, derivado ≈ +1,5 para 10+6 (el 0 mezcla los 16 de varias cartas) | "Si no estás seguro de un índice, dilo". Se muestran como comparación; el cálculo exacto manda | Inventar o ajustar índices |
+| 2026-11-26 | La app muestra por separado: tabla, desviación por conteo y desviación por composición (adviseHand) | Así entiendes POR QUÉ cambia la jugada | Mostrar solo una recomendación |
 | 2026-11-25 | Los oráculos del arquitecto se guardan en `tools/oraculos/` | Así se puede repetir la verificación en cualquier momento | Dejarlos en una carpeta temporal |
 | 2026-11-25 | El zapato es inmutable y el conteo se deriva de él | Una sola fuente de verdad, y deshacer y rehacer salen gratis en la Fase 4 | Guardar el conteo aparte (puede desincronizarse) |
 
