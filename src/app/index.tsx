@@ -19,7 +19,7 @@ import { useAdvice } from '../state/useAdvice';
 import { theme } from '../ui/theme';
 
 const keyToRank: Record<string, Rank> = {
-  a: 'A', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
+  a: 'A', '1': 'A', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
   '0': 'T', t: 'T', j: 'T', q: 'T', k: 'T',
 };
 
@@ -36,16 +36,19 @@ export default function Index() {
   const iSkipped = session.round !== null && session.mySeat !== null && !session.round.active[session.mySeat];
   const roundBet = session.round && !iSkipped ? suggestedBet(trueCount(session.round.startShoe), bets.config) : 0;
 
-  // Atajos de teclado en la PC: A, 2-9, 0/J/Q/K = 10, espacio = siguiente, retroceso = deshacer, N = zapato.
+  // Atajos en la PC: A/1, 2-9, 0/J/Q/K = 10, espacio/→ = siguiente, Shift/retroceso = deshacer, R = rehacer, D = dividir, N = ajustes.
   useEffect(() => {
     if (Platform.OS !== 'web' || settingsOpen || starting) return;
     const onKey = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || event.ctrlKey || event.metaKey || event.altKey) return;
+      // repeat: dejar una tecla presionada no debe meter varias cartas.
+      if (event.repeat || tag === 'INPUT' || tag === 'TEXTAREA' || event.ctrlKey || event.metaKey || event.altKey) return;
       const key = event.key.toLowerCase();
       if (keyToRank[key]) dispatch({ type: 'card', rank: keyToRank[key] });
-      else if (key === ' ') dispatch({ type: 'next' });
-      else if (key === 'backspace') dispatch({ type: 'undo' });
+      else if (key === ' ' || key === 'arrowright') dispatch({ type: 'next' });
+      else if (key === 'shift' || key === 'backspace') dispatch({ type: 'undo' });
+      else if (key === 'r') dispatch({ type: 'redo' });
+      else if (key === 'd') dispatch({ type: 'split' });
       else if (key === 'n') setSettingsOpen(true);
       else return;
       event.preventDefault();
