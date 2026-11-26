@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { CARDS_PER_DECK, RANKS, type Rank } from './cards';
-import { cardsLeftInShoe, dealSeen, newShoe, pastCut, penetration, totalCards } from './shoe';
+import { cardsLeftInShoe, dealSeen, newShoe, pastCut, penetration, returnCard, totalCards } from './shoe';
 import { decksRemaining, runningCount, trueCount } from './hilo';
 
 function dealMany(shoe: ReturnType<typeof newShoe>, rank: Rank, n: number) {
@@ -130,5 +130,16 @@ describe('shoe', () => {
     expect(runningCount(shoe)).toBe(2);
     expect(cardsLeftInShoe(shoe)).toBe(45);
     expect(penetration(shoe)).toBeCloseTo(7 / 52, 10);
+  });
+
+  it('returns a seen card immutably', () => {
+    const shoe = newShoe({ decks: 8, burnCards: 1, cutPenetration: 0.75 });
+    expect(returnCard(dealSeen(shoe, '5'), '5')).toEqual(shoe);
+  });
+
+  it('rejects returning unseen cards', () => {
+    const shoe = newShoe({ decks: 8, burnCards: 1, cutPenetration: 0.75 });
+    expect(() => returnCard(shoe, '5')).toThrow('No hay cartas vistas para devolver');
+    expect(() => returnCard(dealSeen(shoe, '5'), '6')).toThrow('No se vio ninguna carta de rango 6');
   });
 });

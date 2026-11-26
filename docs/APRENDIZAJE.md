@@ -57,6 +57,9 @@ Este archivo es tu cuaderno. Se actualiza al cerrar cada fase y tiene tres parte
 | **Monte Carlo** | Simular millones de manos al azar y medir el resultado promedio. Con 20 millones de rondas el margen es ±0,05 % |
 | **Error estándar** | Cuánto puede variar un promedio simulado solo por azar. "0,478 % ± 0,052 %" significa que el valor real está casi seguro entre 0,43 % y 0,53 % |
 | **Análisis combinatorio** | Sumar las probabilidades exactas de todas las manos iniciales en vez de simular. Es otra forma independiente de calcular la ventaja de la casa |
+| **Reparto en dos vueltas** | Una carta a cada puesto activo (1→7), luego la visible del crupier, luego la segunda carta a cada puesto. El objetivo del teclado avanza solo en ese orden |
+| **Zapato de decisión** | Las cartas que el motor puede usar para TU decisión: el reparto inicial, más lo que pidieron los puestos que juegan antes que tú, más tus cartas. Nunca las de los que juegan después |
+| **Historial (deshacer/rehacer)** | Se guardan los estados anteriores (pasado) y los deshechos (futuro). Como todo es inmutable, deshacer es simplemente volver al estado anterior |
 | **Prueba aleatoria (property test)** | Generar miles de casos al azar y comprobar que una propiedad se cumple siempre, por ejemplo que el conteo es igual a la suma de las cartas vistas |
 
 ---

@@ -59,3 +59,15 @@ export function dealSeen(shoe: ShoeState, rank: Rank): ShoeState {
     seen: shoe.seen + 1,
   };
 }
+
+export function returnCard(shoe: ShoeState, rank: Rank): ShoeState {
+  if (shoe.seen === 0) throw new Error('No hay cartas vistas para devolver');
+  if (shoe.unseen[rank] === shoe.config.decks * CARDS_PER_DECK[rank]) {
+    throw new Error(`No se vio ninguna carta de rango ${rank}`);
+  }
+  return {
+    config: shoe.config,
+    unseen: { ...shoe.unseen, [rank]: shoe.unseen[rank] + 1 },
+    seen: shoe.seen - 1,
+  };
+}
