@@ -35,9 +35,23 @@ function nextInitialSlot(round: RoundState): Pick<RoundState, 'phase' | 'target'
   if (round.dealer.length === 0) return { phase: 'initial', target: { kind: 'dealer' } };
   const firstOne = seats.find((seat) => round.hands[seat][0]?.length === 1);
   if (firstOne !== undefined) return { phase: 'initial', target: { kind: 'seat', seat: firstOne, hand: 0 } };
-  return seats.length
-    ? { phase: 'players', target: { kind: 'seat', seat: seats[0], hand: 0 } }
-    : { phase: 'dealer', target: { kind: 'dealer' } };
+  return toTurn(seats.length ? playableFrom(round, seats[0], 0) : null);
+}
+
+/** Primera mano por jugar desde (seat, hand); salta las que ya suman 21 (blackjack: no hay nada que decidir). */
+function playableFrom(round: RoundState, seat: SeatNumber, hand: number): Target | null {
+  const seats = activeSeats(round);
+  for (let i = seats.indexOf(seat); i >= 0 && i < seats.length; i += 1) {
+    const hands = round.hands[seats[i]];
+    for (let h = seats[i] === seat ? hand : 0; h < hands.length; h += 1) {
+      if (handTotal(hands[h]).total < 21) return { kind: 'seat', seat: seats[i], hand: h };
+    }
+  }
+  return null;
+}
+
+function toTurn(target: Target | null): Pick<RoundState, 'phase' | 'target'> {
+  return target ? { phase: 'players', target } : { phase: 'dealer', target: { kind: 'dealer' } };
 }
 
 export function newRound(shoe: ShoeState, active: Record<SeatNumber, boolean>, config: RoundConfig): RoundState {
@@ -71,9 +85,7 @@ export function nextHand(round: RoundState): RoundState {
   if (hand + 1 < round.hands[seat].length) return { ...round, target: { kind: 'seat', seat, hand: hand + 1 } };
   const seats = activeSeats(round);
   const nextSeat = seats[seats.indexOf(seat) + 1];
-  return nextSeat === undefined
-    ? { ...round, phase: 'dealer', target: { kind: 'dealer' } }
-    : { ...round, target: { kind: 'seat', seat: nextSeat, hand: 0 } };
+  return { ...round, ...toTurn(nextSeat === undefined ? null : playableFrom(round, nextSeat, 0)) };
 }
 
 export function enterCard(round: RoundState, rank: Rank): RoundState {

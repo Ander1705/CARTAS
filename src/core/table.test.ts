@@ -11,6 +11,26 @@ function roundWith(ranks: Rank[], active = active134, roundConfig: { direction: 
   return ranks.reduce((round, rank) => enterCard(round, rank), newRound(shoe(), active, roundConfig));
 }
 
+describe('blackjack de un jugador: no se le pregunta nada', () => {
+  it('el turno empieza en el primer puesto sin blackjack', () => {
+    // Puesto 1: A+T (blackjack), puesto 3: 2+6, puesto 4: 3+7; crupier 4.
+    const round = roundWith(['A', '2', '3', '4', 'T', '6', '7']);
+    expect(round.phase).toBe('players');
+    expect(round.target).toEqual({ kind: 'seat', seat: 3, hand: 0 });
+  });
+
+  it('Siguiente salta a quien tiene blackjack más adelante', () => {
+    // Puesto 1: 2+6, puesto 3: A+T (blackjack), puesto 4: 3+7.
+    const round = nextHand(roundWith(['2', 'A', '3', '4', '6', 'T', '7']));
+    expect(round.target).toEqual({ kind: 'seat', seat: 4, hand: 0 });
+  });
+
+  it('si todos tienen blackjack, pasa directo al crupier', () => {
+    const round = roundWith(['A', 'T', 'A', '4', 'T', 'A', 'T']);
+    expect(round).toMatchObject({ phase: 'dealer', target: { kind: 'dealer' } });
+  });
+});
+
 describe('saltar un puesto que no apostó', () => {
   it('Siguiente en el primer reparto salta el puesto vacío solo en esta ronda', () => {
     let round = nextHand(newRound(shoe(), active134, config));
